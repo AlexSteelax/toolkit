@@ -1,0 +1,120 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.8.34309.116
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "extras", "extras", "{C5B58355-49DB-4209-B1B1-08D43CB264E3}"
+	ProjectSection(SolutionItems) = preProject
+		GitVersion.yml = GitVersion.yml
+		LICENSE = LICENSE
+		README.md = README.md
+		.github\workflows\main.yml = .github\workflows\main.yml
+		Directory.Packages.props = Directory.Packages.props
+		Directory.Build.props = Directory.Build.props
+		.gitignore = .gitignore
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{19C26739-0DB6-4EFA-A104-71ED74B83473}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tests", "tests", "{8DE90B3E-24A0-443D-95C2-EEA1EFB87C3F}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "benchmarks", "benchmarks", "{0B078B25-8D2C-4B75-A3B0-EA8411C1A04A}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "github", "github", "{FC4CFAC1-A212-4F12-9415-ADAFBE2A085F}"
+	ProjectSection(SolutionItems) = preProject
+		.github\workflows\main.yml = .github\workflows\main.yml
+	EndProjectSection
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Steelax.Toolkit.HighPerformance.Exploration", "tests\Steelax.Toolkit.HighPerformance.Exploration\Steelax.Toolkit.HighPerformance.Exploration.csproj", "{CDDEAEA1-C1FB-473E-A9FE-4C8C0C040FE4}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Steelax.Toolkit.HighPerformance", "src\Steelax.Toolkit.HighPerformance\Steelax.Toolkit.HighPerformance.csproj", "{4AD33853-7764-4D1F-910C-E2F28C0305AB}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Steelax.Toolkit.HighPerformance.Tests", "tests\Steelax.Toolkit.HighPerformance.Tests\Steelax.Toolkit.HighPerformance.Tests.csproj", "{B2AF98F0-FF8B-4FA0-8825-8DFDF88340B8}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Steelax.Toolkit.HighPerformance.Benchmarks", "benchmarks\Steelax.Toolkit.HighPerformance.Benchmarks\Steelax.Toolkit.HighPerformance.Benchmarks.csproj", "{7E59D403-A93F-4B2F-871D-40160D9BFE57}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "docs", "docs", "{340A2C35-1311-4820-80F4-0E43563C689C}"
+	ProjectSection(SolutionItems) = preProject
+		docs\AsyncMarshal.md = docs\AsyncMarshal.md
+		docs\BitTaskAny.md = docs\BitTaskAny.md
+		docs\EventEnumerator.md = docs\EventEnumerator.md
+		docs\EventTask.md = docs\EventTask.md
+		docs\FanInSignalCallback.md = docs\FanInSignalCallback.md
+		docs\FanInSlim.md = docs\FanInSlim.md
+		docs\ResultStates.md = docs\ResultStates.md
+		docs\RingBuffer.md = docs\RingBuffer.md
+		docs\SlotSet.md = docs\SlotSet.md
+	EndProjectSection
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Debug|x64 = Debug|x64
+		Debug|x86 = Debug|x86
+		Release|Any CPU = Release|Any CPU
+		Release|x64 = Release|x64
+		Release|x86 = Release|x86
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{CDDEAEA1-C1FB-473E-A9FE-4C8C0C040FE4}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{CDDEAEA1-C1FB-473E-A9FE-4C8C0C040FE4}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{CDDEAEA1-C1FB-473E-A9FE-4C8C0C040FE4}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{CDDEAEA1-C1FB-473E-A9FE-4C8C0C040FE4}.Debug|x64.Build.0 = Debug|Any CPU
+		{CDDEAEA1-C1FB-473E-A9FE-4C8C0C040FE4}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{CDDEAEA1-C1FB-473E-A9FE-4C8C0C040FE4}.Debug|x86.Build.0 = Debug|Any CPU
+		{CDDEAEA1-C1FB-473E-A9FE-4C8C0C040FE4}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{CDDEAEA1-C1FB-473E-A9FE-4C8C0C040FE4}.Release|Any CPU.Build.0 = Release|Any CPU
+		{CDDEAEA1-C1FB-473E-A9FE-4C8C0C040FE4}.Release|x64.ActiveCfg = Release|Any CPU
+		{CDDEAEA1-C1FB-473E-A9FE-4C8C0C040FE4}.Release|x64.Build.0 = Release|Any CPU
+		{CDDEAEA1-C1FB-473E-A9FE-4C8C0C040FE4}.Release|x86.ActiveCfg = Release|Any CPU
+		{CDDEAEA1-C1FB-473E-A9FE-4C8C0C040FE4}.Release|x86.Build.0 = Release|Any CPU
+		{4AD33853-7764-4D1F-910C-E2F28C0305AB}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{4AD33853-7764-4D1F-910C-E2F28C0305AB}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{4AD33853-7764-4D1F-910C-E2F28C0305AB}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{4AD33853-7764-4D1F-910C-E2F28C0305AB}.Debug|x64.Build.0 = Debug|Any CPU
+		{4AD33853-7764-4D1F-910C-E2F28C0305AB}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{4AD33853-7764-4D1F-910C-E2F28C0305AB}.Debug|x86.Build.0 = Debug|Any CPU
+		{4AD33853-7764-4D1F-910C-E2F28C0305AB}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{4AD33853-7764-4D1F-910C-E2F28C0305AB}.Release|Any CPU.Build.0 = Release|Any CPU
+		{4AD33853-7764-4D1F-910C-E2F28C0305AB}.Release|x64.ActiveCfg = Release|Any CPU
+		{4AD33853-7764-4D1F-910C-E2F28C0305AB}.Release|x64.Build.0 = Release|Any CPU
+		{4AD33853-7764-4D1F-910C-E2F28C0305AB}.Release|x86.ActiveCfg = Release|Any CPU
+		{4AD33853-7764-4D1F-910C-E2F28C0305AB}.Release|x86.Build.0 = Release|Any CPU
+		{B2AF98F0-FF8B-4FA0-8825-8DFDF88340B8}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{B2AF98F0-FF8B-4FA0-8825-8DFDF88340B8}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{B2AF98F0-FF8B-4FA0-8825-8DFDF88340B8}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{B2AF98F0-FF8B-4FA0-8825-8DFDF88340B8}.Debug|x64.Build.0 = Debug|Any CPU
+		{B2AF98F0-FF8B-4FA0-8825-8DFDF88340B8}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{B2AF98F0-FF8B-4FA0-8825-8DFDF88340B8}.Debug|x86.Build.0 = Debug|Any CPU
+		{B2AF98F0-FF8B-4FA0-8825-8DFDF88340B8}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{B2AF98F0-FF8B-4FA0-8825-8DFDF88340B8}.Release|Any CPU.Build.0 = Release|Any CPU
+		{B2AF98F0-FF8B-4FA0-8825-8DFDF88340B8}.Release|x64.ActiveCfg = Release|Any CPU
+		{B2AF98F0-FF8B-4FA0-8825-8DFDF88340B8}.Release|x64.Build.0 = Release|Any CPU
+		{B2AF98F0-FF8B-4FA0-8825-8DFDF88340B8}.Release|x86.ActiveCfg = Release|Any CPU
+		{B2AF98F0-FF8B-4FA0-8825-8DFDF88340B8}.Release|x86.Build.0 = Release|Any CPU
+		{7E59D403-A93F-4B2F-871D-40160D9BFE57}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{7E59D403-A93F-4B2F-871D-40160D9BFE57}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{7E59D403-A93F-4B2F-871D-40160D9BFE57}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{7E59D403-A93F-4B2F-871D-40160D9BFE57}.Debug|x64.Build.0 = Debug|Any CPU
+		{7E59D403-A93F-4B2F-871D-40160D9BFE57}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{7E59D403-A93F-4B2F-871D-40160D9BFE57}.Debug|x86.Build.0 = Debug|Any CPU
+		{7E59D403-A93F-4B2F-871D-40160D9BFE57}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{7E59D403-A93F-4B2F-871D-40160D9BFE57}.Release|Any CPU.Build.0 = Release|Any CPU
+		{7E59D403-A93F-4B2F-871D-40160D9BFE57}.Release|x64.ActiveCfg = Release|Any CPU
+		{7E59D403-A93F-4B2F-871D-40160D9BFE57}.Release|x64.Build.0 = Release|Any CPU
+		{7E59D403-A93F-4B2F-871D-40160D9BFE57}.Release|x86.ActiveCfg = Release|Any CPU
+		{7E59D403-A93F-4B2F-871D-40160D9BFE57}.Release|x86.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{CDDEAEA1-C1FB-473E-A9FE-4C8C0C040FE4} = {8DE90B3E-24A0-443D-95C2-EEA1EFB87C3F}
+		{4AD33853-7764-4D1F-910C-E2F28C0305AB} = {19C26739-0DB6-4EFA-A104-71ED74B83473}
+		{B2AF98F0-FF8B-4FA0-8825-8DFDF88340B8} = {8DE90B3E-24A0-443D-95C2-EEA1EFB87C3F}
+		{7E59D403-A93F-4B2F-871D-40160D9BFE57} = {0B078B25-8D2C-4B75-A3B0-EA8411C1A04A}
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {49383F29-3C46-4B19-9899-42E27D25DE4C}
+	EndGlobalSection
+EndGlobal
