@@ -2,8 +2,7 @@
 
     <PropertyGroup>
         <TargetFramework>net10.0</TargetFramework>
-        <ImplicitUsings>enable</ImplicitUsings>
-        <Nullable>enable</Nullable>
+        <IsPackable>true</IsPackable>
 
         <!-- NuGet package metadata (project-specific; shared metadata lives in Directory.Build.props) -->
         <PackageId>Steelax.Toolkit.HighPerformance</PackageId>
