@@ -42,7 +42,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "docs", "docs", "{340A2C35-1
 		docs\FanInSignalCallback.md = docs\FanInSignalCallback.md
 		docs\FanInSlim.md = docs\FanInSlim.md
 		docs\ResultStates.md = docs\ResultStates.md
-		docs\RingBuffer.md = docs\RingBuffer.md
+		docs\Deque.md = docs\Deque.md
 		docs\SlotSet.md = docs\SlotSet.md
 	EndProjectSection
 EndProject

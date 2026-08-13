@@ -6,7 +6,7 @@
 **Steelax.Toolkit.HighPerformance** — a collection of high-performance primitives for building non-blocking, signal-driven async pipelines:
 
 - **lock-free / lightweight concurrency** — fan-in signaling, event-driven task/enumerator wrappers, task-slot sets;
-- **low-allocation data structures** — fixed-capacity ring buffer and bitmask-based slot sets.
+- **low-allocation data structures** — fixed-capacity deque and bitmask-based slot sets.
 
 The library is the foundation for the [Steelax.Pufflow](https://www.nuget.org/packages/Steelax.Pufflow) dataflow pipelines, but every primitive is a standalone public API.
 
@@ -26,7 +26,7 @@ dotnet add package Steelax.Toolkit.HighPerformance
 
 | Type | Namespace | Docs |
 |------|-----------|------|
-| `RingBuffer<T>` | `Steelax.Toolkit.HighPerformance.Primitives` | [📄 RingBuffer](docs/RingBuffer.md) |
+| `Deque<T>` | `Steelax.Toolkit.HighPerformance.Primitives` | [📄 Deque](docs/Deque.md) |
 | `SlotSet` | `Steelax.Toolkit.HighPerformance.Primitives` | [📄 SlotSet](docs/SlotSet.md) |
 
 ### Concurrency Primitives

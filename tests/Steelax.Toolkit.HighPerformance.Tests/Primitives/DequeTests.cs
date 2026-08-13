@@ -3,9 +3,9 @@ using Steelax.Toolkit.HighPerformance.Primitives;
 namespace Steelax.Toolkit.HighPerformance.Tests.Primitives;
 
 /// <summary>
-/// Unit tests for the <see cref="RingBuffer{T}"/> class.
+/// Unit tests for the <see cref="Deque{T}"/> class.
 /// </summary>
-public static partial class RingBufferTests
+public static partial class DequeTests
 {
     private struct Counter
     {

@@ -118,4 +118,4 @@ await producer;
 ## See also
 
 - [`EventTask<T>`](EventTask.md) / [`EventEnumerator<T>`](EventEnumerator.md) — related event-driven wrappers.
-- [`RingBuffer<T>`](RingBuffer.md) — a simpler single-thread FIFO structure.
+- [`Deque<T>`](Deque.md) — a simpler single-thread double-ended structure.

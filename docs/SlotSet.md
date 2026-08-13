@@ -75,4 +75,4 @@ while (set.Any)
 ## See also
 
 - [`FanInSlim`](FanInSlim.md) — `Take()` returns a `SlotSet` of fired slots.
-- [`RingBuffer<T>`](RingBuffer.md)
+- [`Deque<T>`](Deque.md)
