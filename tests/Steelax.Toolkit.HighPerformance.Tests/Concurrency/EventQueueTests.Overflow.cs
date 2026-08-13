@@ -42,5 +42,48 @@ public static partial class EventQueueTests
             Assert.True(queue.WriterSeq < 1_000);
             Assert.True(queue.ReaderSeq < 1_000);
         }
+
+        [Fact]
+        public void Count_SurvivesSequenceWrapAround()
+        {
+            // Счётчики вплотную к uint.MaxValue: WriterSeq переполняется (uint.MaxValue -> 0),
+            // ReaderSeq ещё нет. Разность в uint (модульная арифметика) должна давать точный Count.
+            var queue = new EventQueue<int>(8);
+            queue.WriterSeq = uint.MaxValue - 2;
+            queue.ReaderSeq = uint.MaxValue - 2;
+
+            // Пусто до записи: оба счётчика на uint.MaxValue - 2.
+            Assert.Equal(uint.MaxValue - 2, queue.WriterSeq);
+            Assert.Equal(uint.MaxValue - 2, queue.ReaderSeq);
+            Assert.Equal(0, queue.Count);
+
+            // Записываем 3 элемента: WriterSeq переходит через uint.MaxValue (→ 0).
+            Assert.True(queue.TryWrite(10));
+            Assert.True(queue.TryWrite(20));
+            Assert.True(queue.TryWrite(30));
+
+            // WriterSeq уже «обернулся» в 0, ReaderSeq ещё нет (uint.MaxValue - 2).
+            Assert.Equal(0u, queue.WriterSeq);
+            Assert.Equal(uint.MaxValue - 2, queue.ReaderSeq);
+            // Модульная разность uint = 3 → Count корректен, несмотря на wrap-around WriterSeq.
+            Assert.Equal(3, queue.Count);
+
+            // Вычитываем по одному, проверяя Count после каждого извлечения.
+            Assert.True(queue.TryRead(out var a, out _));
+            Assert.Equal(10, a);
+            Assert.Equal(2, queue.Count);
+
+            Assert.True(queue.TryRead(out var b, out _));
+            Assert.Equal(20, b);
+            Assert.Equal(1, queue.Count);
+            Assert.Equal(uint.MaxValue, queue.ReaderSeq);   // uint.MaxValue - 2 + 2
+
+            // Вычитываем последний — ReaderSeq оборачивается в 0, Count = 0.
+            Assert.True(queue.TryRead(out var c, out _));
+            Assert.Equal(30, c);
+            Assert.Equal(0u, queue.WriterSeq);
+            Assert.Equal(0u, queue.ReaderSeq);
+            Assert.Equal(0, queue.Count);
+        }
     }
 }

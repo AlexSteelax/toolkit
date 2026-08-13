@@ -70,6 +70,18 @@ public partial class EventQueue<T> : IValueTaskSource
         _readCore = new ManualResetValueTaskSourceCore<bool> { RunContinuationsAsynchronously = !allowSynchronousContinuations };
     }
 
+    /// <summary>
+    /// Gets the number of items currently buffered.
+    /// </summary>
+    /// <remarks>
+    /// A best-effort snapshot: under concurrent access it reflects the delta between the published
+    /// (<see cref="WriterSeq"/>) and consumed (<see cref="ReaderSeq"/>) sequences at read time and may
+    /// be momentarily off (e.g. an item written but not yet drained). It never underflows and costs no
+    /// writes on the hot path — both counters already exist.
+    /// </remarks>
+    [PublicAPI]
+    public int Count => (int)(Volatile.Read(ref WriterSeq) - Volatile.Read(ref ReaderSeq));
+
     /// <summary>Raised when a previously full buffer frees capacity (the producer may retry a rejected write).</summary>
     [PublicAPI]
     public event Action? OnWriteReady;
