@@ -27,6 +27,7 @@ dotnet add package Steelax.Toolkit.HighPerformance
 | Type | Namespace | Docs |
 |------|-----------|------|
 | `Deque<T>` | `Steelax.Toolkit.HighPerformance.Primitives` | [📄 Deque](docs/Deque.md) |
+| `RingCursor<T>` | `Steelax.Toolkit.HighPerformance.Primitives` | [📄 RingCursor](docs/RingCursor.md) |
 | `SlotSet` | `Steelax.Toolkit.HighPerformance.Primitives` | [📄 SlotSet](docs/SlotSet.md) |
 
 ### Concurrency Primitives
