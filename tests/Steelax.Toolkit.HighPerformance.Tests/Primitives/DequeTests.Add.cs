@@ -14,7 +14,7 @@ public static partial class DequeTests
             Assert.True(deque.TryAddLast(1));
             Assert.True(deque.TryAddLast(2));
             Assert.False(deque.TryAddLast(3));
-            Assert.Equal(2, deque.Count);
+            Assert.True(deque.IsFull);
         }
 
         [Fact]
@@ -25,7 +25,7 @@ public static partial class DequeTests
             Assert.True(deque.TryAddFirst(1));
             Assert.True(deque.TryAddFirst(2));
             Assert.False(deque.TryAddFirst(3));
-            Assert.Equal(2, deque.Count);
+            Assert.True(deque.IsFull);
         }
 
         [Fact]

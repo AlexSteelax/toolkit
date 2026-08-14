@@ -70,6 +70,7 @@ public static partial class DequeTests
             deque.TryAddLast(2);
             deque.TryAddLast(3);
             Assert.Equal(3, deque.Count);
+            Assert.True(deque.IsFull);
             Assert.False(deque.TryAddLast(4));
 
             // Consume two — the ring must reuse those slots.

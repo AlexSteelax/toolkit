@@ -73,6 +73,10 @@ public sealed class Deque<T>
     [PublicAPI]
     public bool IsEmpty => _count == 0;
 
+    /// <summary>Indicates whether the deque is full.</summary>
+    [PublicAPI]
+    public bool IsFull => _count == _capacity;
+
     /// <summary>
     /// Adds an element to the front of the deque.
     /// </summary>

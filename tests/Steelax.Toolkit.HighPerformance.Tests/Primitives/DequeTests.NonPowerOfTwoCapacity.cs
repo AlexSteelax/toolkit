@@ -16,6 +16,7 @@ public static partial class DequeTests
 
             for (var i = 0; i < 5; i++)
                 Assert.True(deque.TryAddLast(i));
+            Assert.True(deque.IsFull);
             Assert.Equal(5, deque.Count);
 
             // The 6th element is rejected — the power-of-two slot is reserved, not exposed.

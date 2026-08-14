@@ -20,6 +20,7 @@ public static partial class DequeTests
             Assert.Equal(4, deque.Capacity);
             Assert.Equal(0, deque.Count);
             Assert.True(deque.IsEmpty);
+            Assert.False(deque.IsFull);
         }
     }
 }
