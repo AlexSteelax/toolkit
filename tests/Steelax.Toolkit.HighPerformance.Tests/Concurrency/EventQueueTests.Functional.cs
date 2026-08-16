@@ -20,7 +20,7 @@ public static partial class EventQueueTests
             while (collected.Count < 5)
             {
                 await queue.WaitToReadAsync();
-                if (queue.TryRead(out var value, out _))
+                if (queue.TryRead(out var value))
                     collected.Add(value);
             }
 
@@ -51,7 +51,7 @@ public static partial class EventQueueTests
 
             await wait;
 
-            Assert.True(queue.TryRead(out var value, out _));
+            Assert.True(queue.TryRead(out var value));
             Assert.Equal(42, value);
         }
 
@@ -61,9 +61,9 @@ public static partial class EventQueueTests
             var queue = new EventQueue<int>(4);
             queue.Complete();
 
-            _ = queue.TryRead(out _, out var completed);
+            _ = queue.TryRead(out _);
             
-            Assert.True(completed);
+            Assert.True(queue.IsCompleted);
         }
 
         [Fact]
@@ -86,7 +86,7 @@ public static partial class EventQueueTests
             var ex = new InvalidOperationException("boom");
             queue.Complete(ex);
 
-            var thrown = Assert.Throws<InvalidOperationException>(() => queue.TryRead(out _, out _));
+            var thrown = Assert.Throws<InvalidOperationException>(() => queue.TryRead(out _));
             Assert.Same(ex, thrown);
         }
 
@@ -108,7 +108,7 @@ public static partial class EventQueueTests
             var raised = 0;
             queue.OnWriteReady += () => raised++;
 
-            Assert.True(queue.TryRead(out _, out _));
+            Assert.True(queue.TryRead(out _));
 
             Assert.True(raised > 0);
         }
@@ -127,11 +127,11 @@ public static partial class EventQueueTests
             // Сигнал заряжается; первый ожидатель завершается, значение читается.
             Assert.True(queue.TryWrite(1));
             await stale;
-            Assert.True(queue.TryRead(out var value, out _));
+            Assert.True(queue.TryRead(out var value));
             Assert.Equal(1, value);
 
             // Опустошаем буфер: неудачный TryRead снимает взведённый сигнал (2 → 0).
-            Assert.False(queue.TryRead(out _, out _));
+            Assert.False(queue.TryRead(out _));
 
             // Следующий WaitToReadAsync идёт в case 0 → Reset инкрементит версию core (V0 → V1).
             _ = queue.WaitToReadAsync();

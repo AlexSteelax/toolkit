@@ -1,12 +1,13 @@
 using System.Collections.Concurrent;
+using System.Runtime.ExceptionServices;
 using System.Threading.Tasks.Sources;
 
 namespace Steelax.Toolkit.HighPerformance.Concurrency;
 
 /// <summary>
 /// A bounded, event-driven SPSC buffer: the write side offers <see cref="TryWrite"/> /
-/// <see cref="Complete"/>, the read side offers <c>TryRead</c> / <c>WaitToReadAsync</c> —
-/// a consumator-style API (non-blocking read plus async wait).
+/// <see cref="Complete"/>, the read side offers <c>TryRead</c> / <c>WaitToReadAsync</c> (and
+/// <see cref="IsCompleted"/>) — a consumator-style API (non-blocking read plus async wait).
 /// </summary>
 /// <typeparam name="T">The type of buffered values.</typeparam>
 /// <remarks>
@@ -35,7 +36,9 @@ public partial class EventQueue<T> : IValueTaskSource
     private readonly uint _mask;
 
     private bool _completed;
-    private Exception? _exception;
+    
+    private bool _eof;
+    private ExceptionDispatchInfo? _error;
 
     /// <summary>The read-side readiness core: wakes an awaiting reader when data arrives or the stream ends.</summary>
     private ManualResetValueTaskSourceCore<bool> _readCore;

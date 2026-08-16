@@ -11,13 +11,13 @@ public static partial class EventQueueTests
 
         while (true)
         {
-            if (queue.TryRead(out var value, out var completed))
+            if (queue.TryRead(out var value))
             {
                 result.Add(value);
                 continue;
             }
 
-            if (completed)
+            if (queue.IsCompleted)
                 break;
             
             await queue.WaitToReadAsync();

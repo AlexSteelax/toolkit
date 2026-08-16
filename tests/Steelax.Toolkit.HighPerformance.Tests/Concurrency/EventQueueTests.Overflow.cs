@@ -69,17 +69,17 @@ public static partial class EventQueueTests
             Assert.Equal(3, queue.Count);
 
             // Вычитываем по одному, проверяя Count после каждого извлечения.
-            Assert.True(queue.TryRead(out var a, out _));
+            Assert.True(queue.TryRead(out var a));
             Assert.Equal(10, a);
             Assert.Equal(2, queue.Count);
 
-            Assert.True(queue.TryRead(out var b, out _));
+            Assert.True(queue.TryRead(out var b));
             Assert.Equal(20, b);
             Assert.Equal(1, queue.Count);
             Assert.Equal(uint.MaxValue, queue.ReaderSeq);   // uint.MaxValue - 2 + 2
 
             // Вычитываем последний — ReaderSeq оборачивается в 0, Count = 0.
-            Assert.True(queue.TryRead(out var c, out _));
+            Assert.True(queue.TryRead(out var c));
             Assert.Equal(30, c);
             Assert.Equal(0u, queue.WriterSeq);
             Assert.Equal(0u, queue.ReaderSeq);

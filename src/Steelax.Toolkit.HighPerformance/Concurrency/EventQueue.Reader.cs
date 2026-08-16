@@ -8,30 +8,24 @@ public partial class EventQueue<T>
     /// Attempts to read a value without blocking.
     /// </summary>
     /// <param name="value">The read value, if available.</param>
-    /// <param name="completed">
-    /// When the return value is <see langword="false"/>, indicates whether the stream has ended
-    /// (<see langword="true"/>) or no data is available yet (<see langword="false"/>).
-    /// </param>
     /// <returns>
-    /// <see langword="true"/> when a value was read; otherwise, <see langword="false"/> with
-    /// <paramref name="completed"/> reporting the end of the stream. If a completion exception was
-    /// captured, it is rethrown instead of returning.
+    /// <see langword="true"/> when a value was read; otherwise, <see langword="false"/>. When
+    /// <see langword="false"/> is returned, check <see cref="IsCompleted"/> to distinguish an ended
+    /// stream (<see langword="true"/>) from a temporarily empty buffer (<see langword="false"/>).
+    /// If a completion exception was captured, it is rethrown instead of returning.
     /// </returns>
     [PublicAPI]
-    public bool TryRead([MaybeNullWhen(false)] out T value, out bool completed)
+    public bool TryRead([MaybeNullWhen(false)] out T value)
     {
         if (Consume(out value!))
-        {
-            completed = false;
             return true;
-        }
 
-        if (Volatile.Read(ref _exception) is { } ex)
-            throw ex;
+        if (Volatile.Read(ref _error) is { } error)
+            error.Throw();
 
-        if (Volatile.Read(ref _completed))
+        if (Volatile.Read(ref _eof))
         {
-            completed = true;
+            _completed = true;
             return false;
         }
 
@@ -50,24 +44,29 @@ public partial class EventQueue<T>
                 // Data has arrived in the meantime — consume it so a valid value is returned
                 // (a bare "true" without a value would corrupt the caller's collection).
                 if (Consume(out value!))
-                {
-                    completed = false;
                     return true;
-                }
 
                 continue;
             }
 
             if (Interlocked.CompareExchange(ref _state, 0, 2) == 2)
-            {
-                completed = false;
                 return false;
-            }
         }
 
-        completed = false;
         return false;
     }
+
+    /// <summary>
+    /// Gets a value indicating whether the stream has ended: <see cref="Complete"/> was called (with or
+    /// without an exception) and the terminal state has been observed by the reader. The value is
+    /// <see langword="true"/> only after a failed <see cref="TryRead"/> observes the end of the stream;
+    /// it is not raised immediately when <c>Complete</c> is called while data is still buffered.
+    /// </summary>
+    /// <remarks>
+    /// Check this property after <see cref="TryRead"/> returns <see langword="false"/> to distinguish an
+    /// ended stream from a temporarily empty buffer.
+    /// </remarks>
+    public bool IsCompleted => _completed;
 
     /// <summary>
     /// Waits asynchronously until a value is available or the stream ends, without blocking the
@@ -80,7 +79,7 @@ public partial class EventQueue<T>
     public ValueTask WaitToReadAsync()
     {
         // Data already published, or the stream is over — no need to wait.
-        if (Volatile.Read(ref WriterSeq) != ReaderSeq || Volatile.Read(ref _completed))
+        if (Volatile.Read(ref WriterSeq) != ReaderSeq || Volatile.Read(ref _eof))
             return ValueTask.CompletedTask;
 
         switch (Volatile.Read(ref _state))
@@ -97,9 +96,7 @@ public partial class EventQueue<T>
                 _readCore.Reset();
 
                 if (Interlocked.CompareExchange(ref _state, 1, 0) != 0)
-                {
                     return ValueTask.CompletedTask;
-                }
 
                 // ReaderTrace.Enqueue($"Wait case0 registered: version={_readCore.Version} WriterSeq={WriterSeq} ReaderSeq={ReaderSeq}");
                 return new ValueTask(this, _readCore.Version);

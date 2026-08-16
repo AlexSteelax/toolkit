@@ -40,10 +40,10 @@ public partial class EventQueueBenchmarks
         {
             while (true)
             {
-                if (queue.TryRead(out _, out var completed))
+                if (queue.TryRead(out _))
                     continue;
 
-                if (completed)
+                if (queue.IsCompleted)
                     break;
                 
                 await queue.WaitToReadAsync();
@@ -75,10 +75,10 @@ public partial class EventQueueBenchmarks
         {
             while (true)
             {
-                if (queue.TryRead(out _, out var completed))
+                if (queue.TryRead(out _))
                     continue;
 
-                if (completed)
+                if (queue.IsCompleted)
                     break;
                 
                 await queue.WaitToReadAsync();

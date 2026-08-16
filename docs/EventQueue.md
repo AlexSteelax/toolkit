@@ -3,7 +3,7 @@
 > Namespace: `Steelax.Toolkit.HighPerformance.Concurrency`
 > Sources: [`EventQueue.cs`](../src/Steelax.Toolkit.HighPerformance/Concurrency/EventQueue.cs), [`EventQueue.Reader.cs`](../src/Steelax.Toolkit.HighPerformance/Concurrency/EventQueue.Reader.cs), [`EventQueue.Writer.cs`](../src/Steelax.Toolkit.HighPerformance/Concurrency/EventQueue.Writer.cs), [`EventQueue.ValueTaskSource.cs`](../src/Steelax.Toolkit.HighPerformance/Concurrency/EventQueue.ValueTaskSource.cs)
 
-A **bounded, event-driven SPSC buffer**: the write side offers `TryWrite` / `Complete`, the read side offers `TryRead` / `WaitToReadAsync` (a consumator-style API: non-blocking read plus async wait).
+A **bounded, event-driven SPSC buffer**: the write side offers `TryWrite` / `Complete`, the read side offers `TryRead` / `WaitToReadAsync` / `IsCompleted` (a consumator-style API: non-blocking read plus async wait).
 
 ## Characteristics
 
@@ -28,13 +28,13 @@ queue.Complete();             // marks the stream as ended (optionally with an e
 // Reader side:
 while (true)
 {
-    if (queue.TryRead(out var value, out var completed))
+    if (queue.TryRead(out var value))
     {
         Console.WriteLine(value);
         continue;
     }
 
-    if (completed)
+    if (queue.IsCompleted)
         break;                // end of stream
 
     await queue.WaitToReadAsync();
@@ -67,8 +67,14 @@ while (true)
 
 | Method | Description |
 |--------|-------------|
-| `bool TryRead([MaybeNullWhen(false)] out T value, out bool completed)` | Attempts to read a value without blocking. Returns `true` when a value was read (`completed == false`). When it returns `false`: the stream is over (`completed == true`) or no data is available yet (`completed == false`). If a completion exception was captured, it is **rethrown** instead of returning. |
+| `bool TryRead([MaybeNullWhen(false)] out T value)` | Attempts to read a value without blocking. Returns `true` when a value was read. When it returns `false`: check `IsCompleted` to tell an ended stream from a temporarily empty buffer. If a completion exception was captured, it is **rethrown** instead of returning. |
 | `ValueTask WaitToReadAsync()` | Waits asynchronously until a value is available or the stream ends, without blocking the calling thread. After the wait completes, call `TryRead` to obtain the value (or the terminal state). |
+
+### Reader state
+
+| Member | Description |
+|--------|-------------|
+| `bool IsCompleted` | `true` when the stream has ended (a failed `TryRead` has observed the end of the stream). |
 
 ## Example: producer/consumer with retry on overflow
 
@@ -94,13 +100,13 @@ var producer = Task.Run(() =>
 var collected = new List<int>();
 while (true)
 {
-    if (queue.TryRead(out var value, out var completed))
+    if (queue.TryRead(out var value))
     {
         collected.Add(value);
         continue;
     }
 
-    if (completed)
+    if (queue.IsCompleted)
         break;
 
     await queue.WaitToReadAsync();

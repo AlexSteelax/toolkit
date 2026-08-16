@@ -1,3 +1,5 @@
+using System.Runtime.ExceptionServices;
+
 namespace Steelax.Toolkit.HighPerformance.Concurrency;
 
 public partial class EventQueue<T>
@@ -17,9 +19,9 @@ public partial class EventQueue<T>
     [PublicAPI]
     public bool TryWrite(T item)
     {
-        // _completed is the writer's own variable (plain read);
+        // _eof is the writer's own flag (plain read);
         // ReaderSeq is written by the reader, so Volatile.Read is required for the full check.
-        if (_completed)
+        if (_eof)
             return false;
 
         if (WriterSeq - Volatile.Read(ref ReaderSeq) >= _capacity)
@@ -43,8 +45,10 @@ public partial class EventQueue<T>
     [PublicAPI]
     public void Complete(Exception? ex = null)
     {
-        Volatile.Write(ref _exception, ex);
-        Volatile.Write(ref _completed, true);
+        if (ex is not null)
+            Volatile.Write(ref _error, ExceptionDispatchInfo.Capture(ex));
+        
+        Volatile.Write(ref _eof, true);
         SignalReadReady();
     }
 }

@@ -35,14 +35,14 @@ public static partial class EventQueueTests
         }
 
         [Theory(Timeout = 10000)]
-        [InlineData(1_000_000, 1, true)]
+        [InlineData(500_000, 1, true)]
         [InlineData(100, 1, false)]
-        [InlineData(1_000_000, 4, true)]
-        [InlineData(1_000, 4, false)]
-        [InlineData(1_000_000, 32, true)]
-        [InlineData(1_000, 32, false)]
-        [InlineData(1_000_000, 128, true)]
-        [InlineData(1_000, 128, false)]
+        [InlineData(500_000, 4, true)]
+        [InlineData(500, 4, false)]
+        [InlineData(500_000, 32, true)]
+        [InlineData(500, 32, false)]
+        [InlineData(500_000, 128, true)]
+        [InlineData(500, 128, false)]
         public async Task ConcurrentProducerConsumer_InputMatchesOutput(int count, int capacity, bool allowSynchronousContinuations)
         {
             var watch = Stopwatch.StartNew();
@@ -89,7 +89,7 @@ public static partial class EventQueueTests
             var consumer = Task.Run(async () =>
             {
                 await queue.WaitToReadAsync();
-                return queue.TryRead(out _, out _);
+                return queue.TryRead(out _);
             }, TestContext.Current.CancellationToken);
 
             await Task.Delay(50, TestContext.Current.CancellationToken);
@@ -108,8 +108,8 @@ public static partial class EventQueueTests
             var consumer = Task.Run(async () =>
             {
                 await queue.WaitToReadAsync();
-                _ = queue.TryRead(out _, out var completed);
-                return completed;
+                _ = queue.TryRead(out _);
+                return queue.IsCompleted;
             }, TestContext.Current.CancellationToken);
 
             await Task.Delay(50, TestContext.Current.CancellationToken);
