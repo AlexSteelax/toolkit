@@ -124,7 +124,8 @@ public sealed class BitTaskAny
 
         _usedMask |= 1u << idx;
         _tasks[idx] = task;
-        AttachSignal(task, GetOrCreateSignal(idx));
+        
+        AsyncMarshal.FireUnsafeOnCompleted(task, GetOrCreateSignal(idx));
 
         return idx;
     }
@@ -173,17 +174,6 @@ public sealed class BitTaskAny
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private Action GetOrCreateSignal(int slot) => _signals[slot] ??= () => OnCompleted(slot);
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static void AttachSignal(Task task, Action signal)
-    {
-        var awaiter = task.GetAwaiter();
-
-        if (awaiter.IsCompleted)
-            signal.Invoke();
-        else
-            awaiter.UnsafeOnCompleted(signal);
-    }
 
     /// <summary>
     /// Marks the associated slot as completed, raising the signal on the 0→1 transition.

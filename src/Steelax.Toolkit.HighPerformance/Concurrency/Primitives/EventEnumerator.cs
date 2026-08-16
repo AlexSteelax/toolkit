@@ -72,9 +72,7 @@ public sealed class EventEnumerator<T> : IAsyncDisposable
             _next = _enumerator.MoveNextAsync();
             #pragma warning restore CA2012
 
-            
-            if (OnReady is not null)
-                _next.GetAwaiter().UnsafeOnCompleted(OnReady);
+            AsyncMarshal.FireUnsafeOnCompleted(_next, OnReady);
 
             _state = EventEnumeratorState.Pending();
         }

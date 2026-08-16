@@ -20,4 +20,8 @@
         <InternalsVisibleTo Include="Steelax.Toolkit.HighPerformance.Tests" />
     </ItemGroup>
 
+    <ItemGroup>
+      <None Remove="repomix-output.md" />
+    </ItemGroup>
+
 </Project>

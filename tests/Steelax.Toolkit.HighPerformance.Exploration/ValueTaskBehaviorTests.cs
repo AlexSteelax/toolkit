@@ -18,7 +18,7 @@ public class ValueTaskBehaviorTests
         var continuationExecuted = false;
 
         var awaiter = vt.GetAwaiter();
-        awaiter.OnCompleted(() => 
+        awaiter.UnsafeOnCompleted(() => 
         {
             // ReSharper disable once AccessToModifiedClosure
             Volatile.Write(ref continuationExecuted, true);
@@ -49,14 +49,12 @@ public class ValueTaskBehaviorTests
         source.SetResult(value);
         
         var continuationExecuted = false;
-        var mre = new ManualResetEventSlim();
         
         var awaiter = vt.GetAwaiter();
-        awaiter.OnCompleted(() => 
+        awaiter.UnsafeOnCompleted(() =>
         {
             // ReSharper disable once AccessToModifiedClosure
             Volatile.Write(ref continuationExecuted, true);
-            mre.Set();
         });
         
         Assert.False(continuationExecuted);
@@ -64,8 +62,9 @@ public class ValueTaskBehaviorTests
         Assert.True(vt.IsCompleted);
         Assert.Equal(value, vt.Result);
 
-        mre.Wait(TestContext.Current.CancellationToken);
-        Assert.True(Volatile.Read(ref continuationExecuted));
+        Assert.True(
+            SpinWait.SpinUntil(() => Volatile.Read(ref continuationExecuted), TimeSpan.FromSeconds(2)),
+            "Continuation never executed");
     }
 
     [Fact]
@@ -81,7 +80,7 @@ public class ValueTaskBehaviorTests
         var continuationExecuted = false;
         
         var awaiter = vt.GetAwaiter();
-        awaiter.OnCompleted(() => 
+        awaiter.UnsafeOnCompleted(() => 
         {
             // ReSharper disable once AccessToModifiedClosure
             Volatile.Write(ref continuationExecuted, true);
@@ -92,6 +91,126 @@ public class ValueTaskBehaviorTests
         Assert.True(vt.IsCompleted);
         Assert.True(vt.IsFaulted);
         Assert.Equal(ex, vt.AsTask().Exception?.InnerException);
+    }
+
+    [Fact]
+    [SuppressMessage("Usage", "xUnit1031:Do not use blocking task operations in test method")]
+    public void TaskBacked_OnCompleted_AlreadyCompleted()
+    {
+        const int value = 42;
+        var vt = new ValueTask<int>(Task.FromResult(value));
+        
+        var continuationExecuted = false;
+        
+        var awaiter = vt.GetAwaiter();
+        awaiter.UnsafeOnCompleted(() =>
+        {
+            // ReSharper disable once AccessToModifiedClosure
+            Volatile.Write(ref continuationExecuted, true);
+        });
+        
+        // Task-бэкенд: даже если задача УЖЕ завершена, UnsafeOnCompleted НЕ выполняет
+        // континуацию инлайново — TaskAwaiter всегда ставит её в очередь (асинхронно).
+        Assert.False(Volatile.Read(ref continuationExecuted));
+
+        Assert.True(vt.IsCompleted);
+        Assert.Equal(value, vt.Result);
+
+        Assert.True(
+            SpinWait.SpinUntil(() => Volatile.Read(ref continuationExecuted), TimeSpan.FromSeconds(2)),
+            "Continuation never executed");
+    }
+
+    [Fact]
+    [SuppressMessage("Usage", "xUnit1031:Do not use blocking task operations in test method")]
+    public void TaskBacked_OnCompleted_AlreadyFaulted()
+    {
+        var ex = new Exception("Test");
+        var vt = new ValueTask<int>(Task.FromException<int>(ex));
+        
+        var continuationExecuted = false;
+        
+        var awaiter = vt.GetAwaiter();
+        awaiter.UnsafeOnCompleted(() =>
+        {
+            // ReSharper disable once AccessToModifiedClosure
+            Volatile.Write(ref continuationExecuted, true);
+        });
+        
+        Assert.False(Volatile.Read(ref continuationExecuted));
+
+        Assert.True(vt.IsCompleted);
+        Assert.True(vt.IsFaulted);
+        Assert.Equal(ex, vt.AsTask().Exception?.InnerException);
+
+        Assert.True(
+            SpinWait.SpinUntil(() => Volatile.Read(ref continuationExecuted), TimeSpan.FromSeconds(2)),
+            "Continuation never executed");
+    }
+
+    [Fact]
+    [SuppressMessage("Usage", "xUnit1031:Do not use blocking task operations in test method")]
+    public void Default_OnCompleted_AlreadyCompleted()
+    {
+        // default ValueTask: нет ни Task, ни IValueTaskSource — IsCompleted == true,
+        // поэтому "прятать" континуацию некуда.
+        ValueTask<int> vt = default;
+        
+        var continuationExecuted = false;
+        
+        var awaiter = vt.GetAwaiter();
+        awaiter.UnsafeOnCompleted(() =>
+        {
+            // ReSharper disable once AccessToModifiedClosure
+            Volatile.Write(ref continuationExecuted, true);
+        });
+        
+        // НЕ инлайново, вопреки ожиданию: даже у default ValueTask континуация
+        // ставится в очередь, а не вызывается прямо в UnsafeOnCompleted.
+        Assert.False(Volatile.Read(ref continuationExecuted));
+
+        // Ждём, выполнится ли континуация асинхронно.
+        Assert.True(
+            SpinWait.SpinUntil(() => Volatile.Read(ref continuationExecuted), TimeSpan.FromSeconds(2)),
+            "Continuation never executed for default ValueTask");
+    }
+
+    [Fact]
+    [SuppressMessage("Usage", "xUnit1031:Do not use blocking task operations in test method")]
+    public void ManualSource_OnCompleted_AlreadyCompleted_Twice()
+    {
+        const int value = 42;
+        var source = new ManualSource();
+        var vt = source.AwaitAsync();
+
+        source.SetResult(value);
+
+        var first = false;
+        var second = false;
+
+        var awaiter = vt.GetAwaiter();
+        awaiter.UnsafeOnCompleted(() =>
+        {
+            // ReSharper disable once AccessToModifiedClosure
+            Volatile.Write(ref first, true);
+        });
+
+        // Вторая регистрация с тем же токеном на уже завершённом core (GetResult ещё не вызывался,
+        // Reset не происходил): проверяем, перезаписывает ли она первую континуацию.
+        awaiter.UnsafeOnCompleted(() =>
+        {
+            // ReSharper disable once AccessToModifiedClosure
+            Volatile.Write(ref second, true);
+        });
+
+        Assert.False(Volatile.Read(ref first));
+        Assert.False(Volatile.Read(ref second));
+
+        Assert.Equal(value, vt.Result);
+
+        Assert.True(
+            SpinWait.SpinUntil(() => Volatile.Read(ref second), TimeSpan.FromSeconds(2)),
+            "Continuation never executed");
     }
 
     [Fact]

@@ -60,8 +60,7 @@ public sealed class EventTask<T>
 
         _task = task;
 
-        if (OnReady is not null)
-            _task.GetAwaiter().UnsafeOnCompleted(OnReady);
+        AsyncMarshal.FireUnsafeOnCompleted(_task, OnReady);
 
         _state = EventTaskState.Pending();
     }
@@ -177,8 +176,7 @@ public sealed class EventTask
 
         _task = task;
 
-        if (OnReady is not null)
-            _task.GetAwaiter().UnsafeOnCompleted(OnReady);
+        AsyncMarshal.FireUnsafeOnCompleted(_task, OnReady);
 
         _state = EventTaskState.Pending();
     }
