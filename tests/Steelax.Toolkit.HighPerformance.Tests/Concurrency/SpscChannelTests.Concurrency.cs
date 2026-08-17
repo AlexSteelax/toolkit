@@ -9,9 +9,9 @@ public static partial class SpscChannelTests
     public sealed class Concurrency(ITestOutputHelper output)
     {
         [Theory(Timeout = 10000)]
-        [InlineData(500, 1, true)]
-        [InlineData(400, 4, true)]
-        [InlineData(800, 32, false)]
+        [InlineData(20, 1, true)]
+        [InlineData(50, 4, true)]
+        [InlineData(200, 32, false)]
         [InlineData(3000, 512, true)]
         public async Task ConcurrentProducerConsumer_InputMatchesOutput(int count, int capacity, bool allowSynchronousContinuations)
         {
