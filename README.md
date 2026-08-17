@@ -34,7 +34,7 @@ dotnet add package Steelax.Toolkit.HighPerformance
 
 | Type | Namespace | Docs |
 |------|-----------|------|
-| `EventQueue<T>` | `...Concurrency` | [📄 EventQueue](docs/EventQueue.md) |
+| `SpscQueue<T>` / `SpscChannel<T>` / `EventReadQueue<T>` / `EventWriteQueue<T>` | `...Concurrency` | [📄 SPSC Queues](docs/SpscQueue.md) |
 | `FanInSlim` | `...Concurrency.Primitives` | [📄 FanInSlim](docs/FanInSlim.md) |
 | `FanInSignalCallback` | `...Concurrency.Primitives` | [📄 FanInSignalCallback](docs/FanInSignalCallback.md) |
 | `BitTaskAny` | `...Concurrency.Primitives` | [📄 BitTaskAny](docs/BitTaskAny.md) |
@@ -47,6 +47,7 @@ dotnet add package Steelax.Toolkit.HighPerformance
 |------|-----------|------|
 | `AsyncMarshal` | `Steelax.Toolkit.HighPerformance` | [📄 AsyncMarshal](docs/AsyncMarshal.md) |
 | `EventEnumeratorState` / `EventTaskState` | `...Concurrency.Primitives` | [📄 Result States](docs/ResultStates.md) |
+| `CompleteSignal` | `...Concurrency.Primitives` | [📄 CompleteSignal](docs/CompleteSignal.md) |
 
 ---
 

@@ -2,10 +2,13 @@ using Steelax.Toolkit.HighPerformance.Concurrency;
 
 namespace Steelax.Toolkit.HighPerformance.Tests.Concurrency;
 
-public static partial class EventQueueTests
+/// <summary>
+/// Unit tests for the <see cref="SpscQueue{T}"/> class.
+/// </summary>
+public static partial class SpscQueueTests
 {
-    /// <summary>Drains the queue via the consumator API until the stream completes.</summary>
-    private static async Task<List<int>> ReadAllAsync(EventQueue<int> queue)
+    /// <summary>Drains the queue until the stream completes.</summary>
+    private static List<int> ReadAll(SpscQueue<int> queue)
     {
         var result = new List<int>();
 
@@ -19,8 +22,9 @@ public static partial class EventQueueTests
 
             if (queue.IsCompleted)
                 break;
-            
-            await queue.WaitToReadAsync();
+
+            // No data yet — yield to allow the producer to make progress.
+            Thread.Yield();
         }
 
         return result;

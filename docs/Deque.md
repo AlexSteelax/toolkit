@@ -112,4 +112,4 @@ stack.TryPopLast(out var top); // top = 3
 
 - [`SlotSet`](SlotSet.md)
 - [`EventEnumerator<T>`](EventEnumerator.md)
-- [`EventQueue<T>`](EventQueue.md) — the bounded SPSC queue counterpart, also based on power-of-two masking
+- [`SpscQueue<T>`](SpscQueue.md) — the bounded SPSC queue counterpart, also based on power-of-two masking

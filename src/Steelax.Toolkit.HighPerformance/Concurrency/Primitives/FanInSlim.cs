@@ -22,7 +22,8 @@ namespace Steelax.Toolkit.HighPerformance.Concurrency.Primitives;
 /// synchronous continuations may safely re-enter <see cref="WaitAsync"/> without a deadlock.
 /// </para>
 /// </remarks>
-public sealed class FanInSlim : IValueTaskSource
+[PublicAPI]
+public sealed class FanInSlim(bool allowSynchronousContinuations = true) : IValueTaskSource
 {
     private uint _readyMask;
 
@@ -31,7 +32,7 @@ public sealed class FanInSlim : IValueTaskSource
 
     private ManualResetValueTaskSourceCore<object?> _core = new()
     {
-        RunContinuationsAsynchronously = false
+        RunContinuationsAsynchronously = !allowSynchronousContinuations
     };
 
     /// <summary>

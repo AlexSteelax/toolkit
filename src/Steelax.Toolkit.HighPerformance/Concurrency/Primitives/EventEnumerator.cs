@@ -23,6 +23,7 @@ namespace Steelax.Toolkit.HighPerformance.Concurrency.Primitives;
 /// raised from any thread. Subscribe to <see cref="OnReady"/> before the first <see cref="MoveNext"/>.
 /// </para>
 /// </remarks>
+[PublicAPI]
 public sealed class EventEnumerator<T> : IAsyncDisposable
 {
     private readonly IAsyncEnumerator<T> _enumerator;
@@ -42,6 +43,7 @@ public sealed class EventEnumerator<T> : IAsyncDisposable
     /// first <see cref="MoveNext"/> to observe every outcome; a subscription added later skips the
     /// iteration already in flight.
     /// </summary>
+    [PublicAPI]
     public event Action? OnReady;
 
     /// <summary>

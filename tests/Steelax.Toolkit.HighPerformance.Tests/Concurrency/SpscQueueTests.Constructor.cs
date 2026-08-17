@@ -2,7 +2,7 @@ using Steelax.Toolkit.HighPerformance.Concurrency;
 
 namespace Steelax.Toolkit.HighPerformance.Tests.Concurrency;
 
-public static partial class EventQueueTests
+public static partial class SpscQueueTests
 {
     public sealed class Constructor
     {
@@ -10,6 +10,6 @@ public static partial class EventQueueTests
         [InlineData(0)]
         [InlineData(-1)]
         public void NonPositiveCapacity_Throws(int capacity) =>
-            Assert.Throws<ArgumentOutOfRangeException>(() => new EventQueue<int>(capacity));
+            Assert.Throws<ArgumentOutOfRangeException>(() => new SpscQueue<int>(capacity));
     }
 }

@@ -3,18 +3,18 @@ using BenchmarkDotNet.Attributes;
 
 namespace Steelax.Toolkit.HighPerformance.Benchmarks;
 
-public partial class EventQueueBenchmarks
+public partial class SpscQueueBenchmarks
 {
-    // [Benchmark(OperationsPerInvoke = 1_000)]
-    // public Task SingleChannel_Async_1k() => SingleChannel(1_000, Capacity, false);
-    //
-    // [Benchmark(OperationsPerInvoke = 1_000_000)]
-    // public Task SingleChannel_Sync_1kk() => SingleChannel(1_000_000, Capacity, true);
-
+    [Benchmark(OperationsPerInvoke = 1_000)]
+    public Task SingleChannel_Async_1k() => SingleChannel(1_000, Capacity, false);
+    
     [Benchmark(OperationsPerInvoke = 1_000_000)]
-    public async Task SingleChannel_Waiting_1kk()
+    public Task SingleChannel_Sync_1kk() => SingleChannel(1_000_000, Capacity, true);
+
+    [Benchmark(OperationsPerInvoke = 10_000_000)]
+    public async Task SingleChannel_Waiting_10kk()
     {
-        const int count = 1_000_000;
+        const int count = 10_000_000;
         
         var channel = Channel.CreateBounded<int>(new BoundedChannelOptions(Capacity)
         {
@@ -72,7 +72,7 @@ public partial class EventQueueBenchmarks
             for (var i = 0; i < count; i++)
             {
                 while (!writer.TryWrite(i))
-                    spin.SpinOnce();
+                    spin.SpinOnce(10);
             }
 
             writer.Complete();

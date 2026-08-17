@@ -23,6 +23,7 @@ public readonly struct FanInSignalCallback
     public void Fire() => _source?.Signal(_index);
     
     /// <summary>Gets a closure-free <see cref="Action"/> that signals the bound slot when invoked.</summary>
+    [PublicAPI]
     public Action Handler
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

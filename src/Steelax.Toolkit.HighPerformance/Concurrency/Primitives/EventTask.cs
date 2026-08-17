@@ -149,6 +149,7 @@ public sealed class EventTask<T>
 /// Observes a <see cref="ValueTask"/> without awaiting it, exposing completion readiness through an
 /// <c>OnReady</c> event and a lightweight state machine.
 /// </summary>
+[PublicAPI]
 public sealed class EventTask
 {
     private ValueTask _task;

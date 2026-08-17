@@ -2,7 +2,7 @@ using Steelax.Toolkit.HighPerformance.Concurrency;
 
 namespace Steelax.Toolkit.HighPerformance.Tests.Concurrency;
 
-public static partial class EventQueueTests
+public static partial class SpscQueueTests
 {
     public sealed class Overflow
     {
@@ -11,9 +11,9 @@ public static partial class EventQueueTests
         {
             // Выставляем монотонные счётчики вплотную к uint.MaxValue, чтобы прогнать
             // переход через границу (uint.MaxValue -> 0) в «непрерывном» потоке:
-            // модель «sequence + single event» должна сохранять инвариант через разность,
+            // модель «sequence» должна сохранять инвариант через разность,
             // не полагаясь на большой предел счётчика.
-            var queue = new EventQueue<int>(1);
+            var queue = new SpscQueue<int>(1);
             queue.WriterSeq = uint.MaxValue - 3;
             queue.ReaderSeq = uint.MaxValue - 3;
 
@@ -29,10 +29,10 @@ public static partial class EventQueueTests
                         spin.SpinOnce();
                 }
 
-                queue.Complete();
+                queue.TryComplete();
             }, TestContext.Current.CancellationToken);
 
-            var collected = await ReadAllAsync(queue);
+            var collected = await Task.Run(() => ReadAll(queue), TestContext.Current.CancellationToken);
 
             await producer.WaitAsync(TimeSpan.FromSeconds(3), TestContext.Current.CancellationToken);
 
@@ -48,7 +48,7 @@ public static partial class EventQueueTests
         {
             // Счётчики вплотную к uint.MaxValue: WriterSeq переполняется (uint.MaxValue -> 0),
             // ReaderSeq ещё нет. Разность в uint (модульная арифметика) должна давать точный Count.
-            var queue = new EventQueue<int>(8);
+            var queue = new SpscQueue<int>(8);
             queue.WriterSeq = uint.MaxValue - 2;
             queue.ReaderSeq = uint.MaxValue - 2;
 

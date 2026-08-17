@@ -69,4 +69,4 @@ if (fanIn.Take().IsSet(slot))
 
 - [`EventTaskState`](ResultStates.md) — the state record returned by `GetState()`.
 - [`EventEnumerator<T>`](EventEnumerator.md) — the enumerator counterpart.
-- [`FanInSlim`](FanInSlim.md) / [`BitTaskAny`](BitTaskAny.md) / [`EventQueue<T>`](EventQueue.md)
+- [`FanInSlim`](FanInSlim.md) / [`BitTaskAny`](BitTaskAny.md) / [`SpscQueue<T>`](SpscQueue.md)

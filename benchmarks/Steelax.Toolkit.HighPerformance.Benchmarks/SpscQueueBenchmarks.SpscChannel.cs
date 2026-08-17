@@ -1,39 +1,32 @@
 ﻿using BenchmarkDotNet.Attributes;
 using Steelax.Toolkit.HighPerformance.Concurrency;
-using Steelax.Toolkit.HighPerformance.Concurrency.Primitives;
 
 namespace Steelax.Toolkit.HighPerformance.Benchmarks;
 
-public partial class EventQueueBenchmarks
+public partial class SpscQueueBenchmarks
 {
-    // [Benchmark(OperationsPerInvoke = 1_000)]
-    // public Task EventQueue_Async_1k() => EventQueue(1_000, Capacity, false);
+    [Benchmark(OperationsPerInvoke = 1_000)]
+    public Task SpscChannel_Async_1k() => SpscChannel(1_000, Capacity, allowSynchronousContinuations: false);
     
-    // [Benchmark(OperationsPerInvoke = 1_000_000)]
-    // public Task EventQueue_Sync_1kk() => EventQueue(1_000_000, Capacity, true);
-
     [Benchmark(OperationsPerInvoke = 1_000_000)]
-    public async Task EventQueue_Waiting_1kk()
-    {
-        const int count = 1_000_000;
-        
-        var queue = new EventQueue<int>(Capacity, true);
-        var fan = new FanInSlim();
+    public Task SpscChannel_Sync_1kk() => SpscChannel(1_000_000, Capacity, allowSynchronousContinuations: true);
 
-        queue.OnWriteReady += fan.GetSignalCallback(0).Handler;
+    [Benchmark(OperationsPerInvoke = 10_000_000)]
+    public async Task SpscChannel_Waiting_10kk()
+    {
+        const int count = 10_000_000;
         
+        var queue = new SpscChannel<int>(Capacity, allowSynchronousContinuations: true);
+
         var producer = Task.Factory.StartNew(async () =>
         {
             for (var i = 0; i < count; i++)
             {
                 while (!queue.TryWrite(i))
-                {
-                    await fan.WaitAsync();
-                    _ = fan.Take();
-                }
+                    await queue.WaitToWriteAsync();
             }
 
-            queue.Complete();
+            queue.TryComplete();
         }, TaskCreationOptions.LongRunning).Unwrap();
 
         var consumer = Task.Factory.StartNew(async () =>
@@ -53,9 +46,9 @@ public partial class EventQueueBenchmarks
         await Task.WhenAll(producer, consumer);
     }
     
-    private static async Task EventQueue(int count, int capacity, bool allowSynchronousContinuations)
+    private static async Task SpscChannel(int count, int capacity, bool allowSynchronousContinuations)
     {
-        var queue = new EventQueue<int>(capacity, allowSynchronousContinuations);
+        var queue = new SpscChannel<int>(capacity, allowSynchronousContinuations);
         
         var producer = Task.Factory.StartNew(() =>
         {
@@ -64,10 +57,10 @@ public partial class EventQueueBenchmarks
             for (var i = 0; i < count; i++)
             {
                 while (!queue.TryWrite(i))
-                    spin.SpinOnce();
+                    spin.SpinOnce(10);
             }
 
-            queue.Complete();
+            queue.TryComplete();
         }, TaskCreationOptions.LongRunning);
 
 
