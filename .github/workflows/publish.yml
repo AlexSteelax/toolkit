@@ -1,0 +1,63 @@
+name: Publish Stable to NuGet
+
+on:
+  push:
+    tags:
+      # Only stable releases (vX.Y.Z).
+      # Preview tags (vX.Y.Z-preview.N) are published by the publish-preview.yml workflow.
+      - 'v[0-9]+.[0-9]+.[0-9]+'
+
+env:
+  DOTNET_VERSION: '10.0.x'
+  CONFIGURATION: Release
+
+# Tests for this commit have already been run by CI on main,
+# so here we only build and publish (Slim).
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  publish:
+    name: Publish to NuGet
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # Full Git history is required for correct GitVersion version calculation.
+          fetch-depth: 0
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: Install GitVersion
+        uses: gittools/actions/gitversion/setup@v4.7.0
+        with:
+          versionSpec: '6.8.x'
+
+      - name: Determine Version
+        uses: gittools/actions/gitversion/execute@v4.7.0
+        with:
+          configFilePath: GitVersion.yml
+
+      - name: Restore
+        run: dotnet restore
+
+      - name: Build
+        run: dotnet build --configuration ${{ env.CONFIGURATION }} --no-restore
+
+      # Version from the tag: semVer (without +metadata, which NuGet does not accept).
+      - name: Pack
+        run: dotnet pack --configuration ${{ env.CONFIGURATION }} --no-build --no-restore /p:Version=${{ env.semVer }} --output artifacts
+
+      # Get a short-lived NuGet API key
+      - name: NuGet login (OIDC → temp API key)
+        uses: NuGet/login@v1
+        id: login
+        with:
+          user: ${{ secrets.NUGET_USER }}
+
+      - name: Publish to NuGet
+        run: dotnet nuget push "artifacts/*.nupkg" --skip-duplicate --api-key ${{ steps.login.outputs.NUGET_API_KEY }} --source https://api.nuget.org/v3/index.json

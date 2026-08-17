@@ -5,10 +5,8 @@ VisualStudioVersion = 17.8.34309.116
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "extras", "extras", "{C5B58355-49DB-4209-B1B1-08D43CB264E3}"
 	ProjectSection(SolutionItems) = preProject
-		GitVersion.yml = GitVersion.yml
 		LICENSE = LICENSE
 		README.md = README.md
-		.github\workflows\main.yml = .github\workflows\main.yml
 		Directory.Packages.props = Directory.Packages.props
 		Directory.Build.props = Directory.Build.props
 		.gitignore = .gitignore
@@ -22,7 +20,10 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "benchmarks", "benchmarks", 
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "github", "github", "{FC4CFAC1-A212-4F12-9415-ADAFBE2A085F}"
 	ProjectSection(SolutionItems) = preProject
-		.github\workflows\main.yml = .github\workflows\main.yml
+		.github\workflows\ci.yml = .github\workflows\ci.yml
+		.github\workflows\publish.yml = .github\workflows\publish.yml
+		GitVersion.yml = GitVersion.yml
+		.github\workflows\publish-preview.yml = .github\workflows\publish-preview.yml
 	EndProjectSection
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Steelax.Toolkit.HighPerformance.Exploration", "tests\Steelax.Toolkit.HighPerformance.Exploration\Steelax.Toolkit.HighPerformance.Exploration.csproj", "{CDDEAEA1-C1FB-473E-A9FE-4C8C0C040FE4}"
