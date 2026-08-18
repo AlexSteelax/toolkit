@@ -49,6 +49,14 @@ public sealed class EventEnumerator<T> : IAsyncDisposable
     /// <summary>
     /// Starts the next iteration of the underlying enumerator without blocking.
     /// </summary>
+    /// <param name="behavior">How to treat <see cref="OnReady"/> when the started operation is already complete.</param>
+    /// <returns>
+    /// <see langword="true"/> when the started operation had already completed — consume it via
+    /// <see cref="GetState"/> / <see cref="GetResult"/> (with
+    /// <see cref="OnCompletedBehavior.SkipCallbackIfCompleted"/>, <see cref="OnReady"/> is not invoked for it).
+    /// Otherwise <see langword="false"/> when the operation is in flight and <see cref="OnReady"/> will fire
+    /// on completion.
+    /// </returns>
     /// <remarks>
     /// <para>
     /// A new iteration is started only when no iteration has been started yet, or when the previous
@@ -66,20 +74,24 @@ public sealed class EventEnumerator<T> : IAsyncDisposable
     /// </para>
     /// </remarks>
     [PublicAPI]
-    public void MoveNext()
+    public bool MoveNext(OnCompletedBehavior behavior = OnCompletedBehavior.RunCallbackInline)
     {
+        bool completed;
+        
         if (_state == default || _state.IsCompletedSuccessfully)
         {
             #pragma warning disable CA2012
             _next = _enumerator.MoveNextAsync();
             #pragma warning restore CA2012
 
-            AsyncMarshal.FireUnsafeOnCompleted(_next, OnReady);
+            completed = AsyncMarshal.FireUnsafeOnCompleted(_next, OnReady, behavior);
 
             _state = EventEnumeratorState.Pending();
         }
         else
             throw new InvalidOperationException("The enumerator cannot advance before the current iteration is consumed.");
+        
+        return completed;
     }
 
     private void AwaitResolve()

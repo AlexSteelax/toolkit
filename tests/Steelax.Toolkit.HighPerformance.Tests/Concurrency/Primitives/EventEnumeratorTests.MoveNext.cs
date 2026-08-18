@@ -59,7 +59,7 @@ public static partial class EventEnumeratorTests
             adapter.MoveNext();
 
             // State is Pending — advancing again before the iteration is consumed is a protocol violation.
-            Assert.Throws<InvalidOperationException>(adapter.MoveNext);
+            Assert.Throws<InvalidOperationException>(() => adapter.MoveNext());
 
             Assert.True(adapter.GetState().IsCompletedSuccessfully);
             Assert.Equal(1, adapter.GetResult()); // did not advance to the second element

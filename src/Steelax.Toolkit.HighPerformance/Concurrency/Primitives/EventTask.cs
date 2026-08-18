@@ -51,18 +51,27 @@ public sealed class EventTask<T>
     /// <see cref="OnReady"/> as its continuation when a subscriber is present.
     /// </summary>
     /// <param name="task">The task to observe (consumed by this call).</param>
+    /// <param name="behavior">How to treat <see cref="OnReady"/> when <paramref name="task"/> is already complete.</param>
+    /// <returns>
+    /// <see langword="true"/> when the task had already completed — consume it via <see cref="GetState"/> /
+    /// <see cref="GetResult"/> (with <see cref="OnCompletedBehavior.SkipCallbackIfCompleted"/>,
+    /// <see cref="OnReady"/> is not invoked for it). Otherwise <see langword="false"/> when the task is in
+    /// flight and <see cref="OnReady"/> will fire on completion.
+    /// </returns>
     /// <exception cref="InvalidOperationException">The previous task is still in flight.</exception>
     [PublicAPI]
-    public void Observe(ValueTask<T> task)
+    public bool Observe(ValueTask<T> task, OnCompletedBehavior behavior = OnCompletedBehavior.RunCallbackInline)
     {
         if (_state.IsPending)
             throw new InvalidOperationException("The previous task is still in flight.");
 
         _task = task;
 
-        AsyncMarshal.FireUnsafeOnCompleted(_task, OnReady);
+        var completed = AsyncMarshal.FireUnsafeOnCompleted(_task, OnReady, behavior);
 
         _state = EventTaskState.Pending();
+
+        return completed;
     }
 
     /// <summary>
@@ -168,18 +177,27 @@ public sealed class EventTask
     /// <see cref="OnReady"/> as its continuation when a subscriber is present.
     /// </summary>
     /// <param name="task">The task to observe (consumed by this call).</param>
+    /// <param name="behavior">How to treat <see cref="OnReady"/> when <paramref name="task"/> is already complete.</param>
+    /// <returns>
+    /// <see langword="true"/> when the task had already completed — consume it via <see cref="GetState"/>
+    /// (with <see cref="OnCompletedBehavior.SkipCallbackIfCompleted"/>, <see cref="OnReady"/> is not invoked
+    /// for it). Otherwise <see langword="false"/> when the task is in flight and <see cref="OnReady"/> will
+    /// fire on completion.
+    /// </returns>
     /// <exception cref="InvalidOperationException">The previous task is still in flight.</exception>
     [PublicAPI]
-    public void Observe(ValueTask task)
+    public bool Observe(ValueTask task, OnCompletedBehavior behavior = OnCompletedBehavior.RunCallbackInline)
     {
         if (_state.IsPending)
             throw new InvalidOperationException("The previous task is still in flight.");
 
         _task = task;
 
-        AsyncMarshal.FireUnsafeOnCompleted(_task, OnReady);
+        var completed = AsyncMarshal.FireUnsafeOnCompleted(_task, OnReady, behavior);
 
         _state = EventTaskState.Pending();
+        
+        return completed;
     }
 
     /// <summary>

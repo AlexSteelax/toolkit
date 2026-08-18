@@ -26,6 +26,12 @@ public static class AsyncMarshal
     /// <typeparam name="T">The type of the task result.</typeparam>
     /// <param name="task">The task to observe.</param>
     /// <param name="callback">The callback to invoke when the task completes; <see langword="null"/> is a no-op.</param>
+    /// <param name="behavior">How to treat the callback when <paramref name="task"/> is already complete.</param>
+    /// <returns>
+    /// <see langword="true"/> when the task was already complete (the callback is not registered for the
+    /// future); otherwise, <see langword="false"/> when a continuation was registered and
+    /// <paramref name="callback"/> will run on completion.
+    /// </returns>
     /// <remarks>
     /// <para>
     /// Unlike a bare <c>GetAwaiter().UnsafeOnCompleted(...)</c>, which always defers a registration on an
@@ -34,20 +40,26 @@ public static class AsyncMarshal
     /// </para>
     /// <para>
     /// The callback is invoked at most once: either synchronously (the task was already completed) or once
-    /// the task completes asynchronously.
+    /// the task completes asynchronously. With <see cref="OnCompletedBehavior.SkipCallbackIfCompleted"/>,
+    /// the callback is not invoked for an already-complete task.
     /// </para>
     /// </remarks>
-    public static void FireUnsafeOnCompleted<T>(scoped in ValueTask<T> task, Action? callback)
+    public static bool FireUnsafeOnCompleted<T>(scoped in ValueTask<T> task, Action? callback, OnCompletedBehavior behavior)
     {
-        if (callback is null)
-            return;
-        
         var awaiter = task.GetAwaiter();
-                
+
         if (awaiter.IsCompleted)
-            callback.Invoke();
-        else
+        {
+            if (behavior == OnCompletedBehavior.RunCallbackInline && callback is not null)
+                callback.Invoke();
+
+            return true;
+        }
+
+        if (callback is not null)
             awaiter.UnsafeOnCompleted(callback);
+        
+        return false;
     }
     
     /// <summary>
@@ -56,6 +68,11 @@ public static class AsyncMarshal
     /// </summary>
     /// <param name="task">The task to observe.</param>
     /// <param name="callback">The callback to invoke when the task completes; <see langword="null"/> is a no-op.</param>
+    /// <param name="behavior">How to treat the callback when <paramref name="task"/> is already complete.</param>
+    /// <returns>
+    /// <see langword="true"/> when the task was already complete; otherwise, <see langword="false"/> when
+    /// a continuation was registered.
+    /// </returns>
     /// <remarks>
     /// <para>
     /// Unlike a bare <c>GetAwaiter().UnsafeOnCompleted(...)</c>, which always defers a registration on an
@@ -64,20 +81,26 @@ public static class AsyncMarshal
     /// </para>
     /// <para>
     /// The callback is invoked at most once: either synchronously (the task was already completed) or once
-    /// the task completes asynchronously.
+    /// the task completes asynchronously. With <see cref="OnCompletedBehavior.SkipCallbackIfCompleted"/>,
+    /// the callback is not invoked for an already-complete task.
     /// </para>
     /// </remarks>
-    public static void FireUnsafeOnCompleted(scoped in ValueTask task, Action? callback)
+    public static bool FireUnsafeOnCompleted(scoped in ValueTask task, Action? callback, OnCompletedBehavior behavior)
     {
-        if (callback is null)
-            return;
-        
         var awaiter = task.GetAwaiter();
-                
+
         if (awaiter.IsCompleted)
-            callback.Invoke();
-        else
+        {
+            if (behavior == OnCompletedBehavior.RunCallbackInline && callback is not null)
+                callback.Invoke();
+
+            return true;
+        }
+
+        if (callback is not null)
             awaiter.UnsafeOnCompleted(callback);
+        
+        return false;
     }
     
     /// <summary>
@@ -86,6 +109,11 @@ public static class AsyncMarshal
     /// </summary>
     /// <param name="task">The task to observe.</param>
     /// <param name="callback">The callback to invoke when the task completes; <see langword="null"/> is a no-op.</param>
+    /// <param name="behavior">How to treat the callback when <paramref name="task"/> is already complete.</param>
+    /// <returns>
+    /// <see langword="true"/> when the task was already complete; otherwise, <see langword="false"/> when
+    /// a continuation was registered.
+    /// </returns>
     /// <remarks>
     /// <para>
     /// Unlike a bare <c>GetAwaiter().UnsafeOnCompleted(...)</c>, which always defers a registration on an
@@ -94,19 +122,25 @@ public static class AsyncMarshal
     /// </para>
     /// <para>
     /// The callback is invoked at most once: either synchronously (the task was already completed) or once
-    /// the task completes asynchronously.
+    /// the task completes asynchronously. With <see cref="OnCompletedBehavior.SkipCallbackIfCompleted"/>,
+    /// the callback is not invoked for an already-complete task.
     /// </para>
     /// </remarks>
-    public static void FireUnsafeOnCompleted(scoped in Task task, Action? callback)
+    public static bool FireUnsafeOnCompleted(scoped in Task task, Action? callback, OnCompletedBehavior behavior)
     {
-        if (callback is null)
-            return;
-        
         var awaiter = task.GetAwaiter();
-                
+
         if (awaiter.IsCompleted)
-            callback.Invoke();
-        else
+        {
+            if (behavior == OnCompletedBehavior.RunCallbackInline && callback is not null)
+                callback.Invoke();
+
+            return true;
+        }
+
+        if (callback is not null)
             awaiter.UnsafeOnCompleted(callback);
+        
+        return false;
     }
 }

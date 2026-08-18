@@ -37,10 +37,14 @@ if (state.IsCompletedSuccessfully)
 | Member | Description |
 |--------|-------------|
 | `event Action? OnReady` | Raised when the observed task completes. Subscribe before the first `Observe`. |
-| `void Observe(ValueTask<T> task)` / `void Observe(ValueTask task)` | Starts observing a task without awaiting it. Throws `InvalidOperationException` when the previous task is still in flight. |
+| `bool Observe(ValueTask<T> task, OnCompletedBehavior behavior = OnCompletedBehavior.RunCallbackInline)` / `bool Observe(ValueTask task, ...)` | Starts observing a task without awaiting it. Returns `true` when the task had already completed (consume via `GetState()`/`GetResult()`); `false` when a continuation is registered and `OnReady` will fire. With `SkipCallbackIfCompleted`, `OnReady` is not invoked for an already-completed task. Throws `InvalidOperationException` when the previous task is still in flight. |
 | `EventTaskState GetState()` | Gets the state of the observed task, resolving it lazily. |
 | `T GetResult()` | Returns the resolved result; rethrows a cancellation or the captured fault. |
 | `Exception? Exception` | The exception captured from a faulted task, if any. |
+
+`OnCompletedBehavior` (namespace `Steelax.Toolkit.HighPerformance`):
+- `RunCallbackInline` (default) — invoke `OnReady` synchronously when the task is already complete.
+- `SkipCallbackIfCompleted` — do not invoke `OnReady` for an already-complete task; consume it directly via `GetState()`/`GetResult()` (the callback is still registered for in-flight tasks).
 
 `GetResult()` throws:
 - `InvalidOperationException` — the observed task has not completed yet.

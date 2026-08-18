@@ -125,7 +125,7 @@ public sealed class BitTaskAny
         _usedMask |= 1u << idx;
         _tasks[idx] = task;
         
-        AsyncMarshal.FireUnsafeOnCompleted(task, GetOrCreateSignal(idx));
+        _ = AsyncMarshal.FireUnsafeOnCompleted(task, GetOrCreateSignal(idx), OnCompletedBehavior.RunCallbackInline);
 
         return idx;
     }

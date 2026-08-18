@@ -10,6 +10,13 @@ Provides marshaling helpers for bridging standard async enumerators into the **n
 | Method | Description |
 |--------|-------------|
 | `EventEnumerator<T> AsNonBlocking<T>(this IAsyncEnumerator<T> source)` | Wraps an `IAsyncEnumerator<T>` into a non-blocking [`EventEnumerator<T>`](EventEnumerator.md) that exposes readiness via an `OnReady` signal instead of awaiting `MoveNextAsync`. The supplied enumerator is consumed by this call. |
+| `bool FireUnsafeOnCompleted<T>(scoped in ValueTask<T> task, Action? callback, OnCompletedBehavior behavior = RunCallbackInline)` | Schedules `callback` to run when `task` completes, or runs it synchronously when the task is already complete. Returns `true` when the task was already completed, `false` when a continuation was registered. With `SkipCallbackIfCompleted`, the callback is not invoked for an already-complete task. |
+| `bool FireUnsafeOnCompleted(scoped in ValueTask task, Action? callback, OnCompletedBehavior behavior = RunCallbackInline)` | Non-generic `ValueTask` overload of the above. |
+| `bool FireUnsafeOnCompleted(scoped in Task task, Action? callback, OnCompletedBehavior behavior = RunCallbackInline)` | `Task` overload of the above. |
+
+`OnCompletedBehavior` (namespace `Steelax.Toolkit.HighPerformance`):
+- `RunCallbackInline` (default) — invoke the callback synchronously when the operation is already complete.
+- `SkipCallbackIfCompleted` — do not invoke the callback for an already-complete operation; the caller consumes the outcome itself, and the callback is registered only for in-flight operations.
 
 ## Usage
 
