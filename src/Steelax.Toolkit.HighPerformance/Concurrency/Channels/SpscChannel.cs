@@ -1,7 +1,6 @@
-﻿using System.Threading.Channels;
-using Steelax.Toolkit.HighPerformance.Concurrency.Primitives;
+﻿using Steelax.Toolkit.HighPerformance.Concurrency.Primitives;
 
-namespace Steelax.Toolkit.HighPerformance.Concurrency;
+namespace Steelax.Toolkit.HighPerformance.Concurrency.Channels;
 
 /// <summary>
 /// A bounded, lock-free SPSC channel: an <see cref="SpscQueue{T}"/> extended with asynchronous
@@ -14,7 +13,7 @@ namespace Steelax.Toolkit.HighPerformance.Concurrency;
 /// <see langword="false"/>, they are scheduled asynchronously.
 /// </param>
 [PublicAPI]
-public class SpscChannel<T>(int capacity, bool allowSynchronousContinuations = true) : SpscQueue<T>(capacity)
+public sealed class SpscChannel<T>(int capacity, bool allowSynchronousContinuations = true) : SpscQueue<T>(capacity)
 {
     private readonly CompleteSignal _readerSignal = new(allowSynchronousContinuations);
     private readonly CompleteSignal _writerSignal = new(allowSynchronousContinuations);
@@ -39,7 +38,7 @@ public class SpscChannel<T>(int capacity, bool allowSynchronousContinuations = t
     /// when a value is already available or the stream is over.
     /// </returns>
     [PublicAPI]
-    public ValueTask WaitToReadAsync()
+    protected internal override ValueTask WaitToReadAsync()
     {
         while (true)
         {
@@ -66,7 +65,7 @@ public class SpscChannel<T>(int capacity, bool allowSynchronousContinuations = t
     /// returned when there is already room or the stream is over.
     /// </returns>
     [PublicAPI]
-    public ValueTask WaitToWriteAsync()
+    protected internal override ValueTask WaitToWriteAsync()
     {
         while (true)
         {
@@ -84,4 +83,18 @@ public class SpscChannel<T>(int capacity, bool allowSynchronousContinuations = t
             return _writerSignal.WaitAsync();
         }
     }
+    
+    /// <summary>
+    /// Gets the read-side role view of the channel, exposing asynchronous read readiness
+    /// (<see cref="ChannelReader{T}.WaitToReadAsync"/>) alongside the core read operations.
+    /// </summary>
+    /// <returns>A <see cref="ChannelReader{T}"/> that waits for data (or the end of the stream) and reads.</returns>
+    public new ChannelReader<T> Reader => new(this);
+    
+    /// <summary>
+    /// Gets the write-side role view of the channel, exposing asynchronous write readiness
+    /// (<see cref="ChannelWriter{T}.WaitToWriteAsync"/>) alongside the core write operations.
+    /// </summary>
+    /// <returns>A <see cref="ChannelWriter{T}"/> that waits for free capacity, writes, and completes the stream.</returns>
+    public new ChannelWriter<T> Writer => new(this);
 }

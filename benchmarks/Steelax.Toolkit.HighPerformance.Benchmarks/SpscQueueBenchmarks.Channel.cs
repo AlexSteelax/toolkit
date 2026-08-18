@@ -5,8 +5,8 @@ namespace Steelax.Toolkit.HighPerformance.Benchmarks;
 
 public partial class SpscQueueBenchmarks
 {
-    [Benchmark(OperationsPerInvoke = 1_000)]
-    public Task SingleChannel_Async_1k() => SingleChannel(1_000, Capacity, false);
+    // [Benchmark(OperationsPerInvoke = 1_000)]
+    // public Task SingleChannel_Async_1k() => SingleChannel(1_000, Capacity, false);
     
     [Benchmark(OperationsPerInvoke = 1_000_000)]
     public Task SingleChannel_Sync_1kk() => SingleChannel(1_000_000, Capacity, true);

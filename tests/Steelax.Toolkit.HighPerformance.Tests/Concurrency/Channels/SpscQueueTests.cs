@@ -1,6 +1,6 @@
-using Steelax.Toolkit.HighPerformance.Concurrency;
+using Steelax.Toolkit.HighPerformance.Concurrency.Channels;
 
-namespace Steelax.Toolkit.HighPerformance.Tests.Concurrency;
+namespace Steelax.Toolkit.HighPerformance.Tests.Concurrency.Channels;
 
 /// <summary>
 /// Unit tests for the <see cref="SpscQueue{T}"/> class.

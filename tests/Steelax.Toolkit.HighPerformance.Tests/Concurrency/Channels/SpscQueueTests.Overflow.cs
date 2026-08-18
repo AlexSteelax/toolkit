@@ -1,6 +1,6 @@
-using Steelax.Toolkit.HighPerformance.Concurrency;
+using Steelax.Toolkit.HighPerformance.Concurrency.Channels;
 
-namespace Steelax.Toolkit.HighPerformance.Tests.Concurrency;
+namespace Steelax.Toolkit.HighPerformance.Tests.Concurrency.Channels;
 
 public static partial class SpscQueueTests
 {

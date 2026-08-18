@@ -2,7 +2,7 @@
 using System.Runtime.CompilerServices;
 using System.Runtime.ExceptionServices;
 
-namespace Steelax.Toolkit.HighPerformance.Concurrency;
+namespace Steelax.Toolkit.HighPerformance.Concurrency.Channels;
 
 /// <summary>
 /// A bounded, lock-free single-producer/single-consumer FIFO queue: the writer enqueues via
@@ -29,6 +29,16 @@ namespace Steelax.Toolkit.HighPerformance.Concurrency;
 /// <para>
 /// A write into an empty queue raises <see cref="OnFirstInsertOrComplete"/>, a protected virtual hook intended
 /// for derived types that layer an external readiness signal on top of the transfer core.
+/// </para>
+/// <para>
+/// Role separation: callers are expected to use the queue through its role views — <see cref="Reader"/>
+/// (read side: <see cref="TryRead"/>, <see cref="IsCompleted"/>, <see cref="Count"/>) and <see cref="Writer"/>
+/// (write side: <see cref="TryWrite"/>, <see cref="TryComplete"/>, <see cref="Count"/>) — obtained via
+/// <see cref="Reader"/> / <see cref="Writer"/>. The underlying operations are <see langword="protected internal"/>:
+/// they are exercised by the role views and by derived channel types, not called directly by consumers.
+/// Waiting (readiness) is layered by derived types that override <see cref="WaitToReadAsync"/> /
+/// <see cref="WaitToWriteAsync"/>; the bare queue does not raise readiness signals and the base implementations
+/// throw <see cref="NotImplementedException"/>.
 /// </para>
 /// </remarks>
 public class SpscQueue<T>
@@ -83,8 +93,30 @@ public class SpscQueue<T>
     /// be momentarily off (e.g. an item written but not yet drained). It never underflows and costs no
     /// writes on the hot path — both counters already exist.
     /// </remarks>
-    [PublicAPI]
-    public int Count => (int)(Volatile.Read(ref WriterSeq) - Volatile.Read(ref ReaderSeq));
+    protected internal int Count => (int)(Volatile.Read(ref WriterSeq) - Volatile.Read(ref ReaderSeq));
+
+    /// <summary>
+    /// Gets a value indicating whether the buffer currently holds at least one item, i.e. a
+    /// <see cref="TryRead"/> would succeed without blocking.
+    /// </summary>
+    /// <remarks>
+    /// A best-effort snapshot under concurrent access (like <see cref="Count"/>): it reflects the
+    /// published/consumed counters at read time and may be momentarily off, but it never underflows.
+    /// The end of the stream is a separate concept — see <see cref="IsCompleted"/>. Exposed to the
+    /// reader role view only.
+    /// </remarks>
+    protected internal bool IsReadable => Volatile.Read(ref WriterSeq) != ReaderSeq;
+
+    /// <summary>
+    /// Gets a value indicating whether the buffer currently has at least one free slot, i.e. a
+    /// <see cref="TryWrite"/> would succeed without being rejected.
+    /// </summary>
+    /// <remarks>
+    /// A best-effort snapshot under concurrent access (like <see cref="Count"/>): it reflects the
+    /// published/consumed counters at read time and may be momentarily off, but it never reports a free
+    /// slot when the buffer is full. Exposed to the writer role view only.
+    /// </remarks>
+    protected internal bool IsWritable => WriterSeq - Volatile.Read(ref ReaderSeq) < Capacity;
 
     /// <summary>
     /// Attempts to read a value without blocking.
@@ -96,8 +128,7 @@ public class SpscQueue<T>
     /// stream (<see langword="true"/>) from a temporarily empty buffer (<see langword="false"/>).
     /// If the stream was closed with an exception, it is rethrown instead of returning.
     /// </returns>
-    [PublicAPI]
-    public virtual bool TryRead([MaybeNullWhen(false)] out T value)
+    protected internal virtual bool TryRead([MaybeNullWhen(false)] out T value)
     {
         var writerSeq = Volatile.Read(ref WriterSeq);
 
@@ -163,6 +194,36 @@ public class SpscQueue<T>
     protected virtual void OnFilled() { }
 
     /// <summary>
+    /// Waits until a value is available or the stream ends, without blocking the calling thread.
+    /// </summary>
+    /// <returns>
+    /// A <see cref="ValueTask"/> that completes when the queue is readable; a completed task is returned
+    /// when a value is already available or the stream is over.
+    /// </returns>
+    /// <exception cref="NotImplementedException">
+    /// Thrown by the base implementation: the bare queue does not raise read-readiness signals. Derived
+    /// channel types (e.g. <see cref="SpscChannel{T}"/>, <see cref="SpscChannelReader{T}"/>) override this
+    /// member to layer readiness on top of the transfer core.
+    /// </exception>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    protected internal virtual ValueTask WaitToReadAsync() => throw new NotImplementedException();
+
+    /// <summary>
+    /// Waits until capacity is available, without blocking the calling thread.
+    /// </summary>
+    /// <returns>
+    /// A <see cref="ValueTask"/> that completes when the queue has free capacity; a completed task is returned
+    /// when there is already room or the stream is over.
+    /// </returns>
+    /// <exception cref="NotImplementedException">
+    /// Thrown by the base implementation: the bare queue does not raise write-readiness signals. Derived
+    /// channel types (e.g. <see cref="SpscChannel{T}"/>, <see cref="SpscChannelWriter{T}"/>) override this
+    /// member to layer readiness on top of the transfer core.
+    /// </exception>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    protected internal virtual ValueTask WaitToWriteAsync() => throw new NotImplementedException();
+
+    /// <summary>
     /// Gets a value indicating whether the stream has ended: <see cref="TryComplete"/> was called and
     /// the buffer is empty (either immediately, or after the reader drained the remaining items).
     /// </summary>
@@ -170,8 +231,7 @@ public class SpscQueue<T>
     /// Check this property after <see cref="TryRead"/> returns <see langword="false"/> to distinguish an
     /// ended stream from a temporarily empty buffer.
     /// </remarks>
-    [PublicAPI]
-    public bool IsCompleted => Volatile.Read(ref _completed);
+    protected internal bool IsCompleted => Volatile.Read(ref _completed);
 
     /// <summary>
     /// Attempts to enqueue an item.
@@ -189,8 +249,7 @@ public class SpscQueue<T>
     /// <exception cref="InvalidOperationException">
     /// Thrown when the stream has already been closed by <see cref="TryComplete"/>.
     /// </exception>
-    [PublicAPI]
-    public virtual bool TryWrite([MaybeNullWhen(false)] T item)
+    protected internal virtual bool TryWrite(T item)
     {
         if (_closed)
             ThrowClosedException();
@@ -223,8 +282,7 @@ public class SpscQueue<T>
     /// <see langword="true"/> if the stream was closed by this call; <see langword="false"/> when it
     /// was already closed.
     /// </returns>
-    [PublicAPI]
-    public virtual bool TryComplete(Exception? ex = null)
+    protected internal virtual bool TryComplete(Exception? ex = null)
     {
         if (_closed)
             return false;
@@ -251,4 +309,18 @@ public class SpscQueue<T>
 
         throw new InvalidOperationException("Queue closed");
     }
+
+    /// <summary>
+    /// Gets the read-side role view of the queue.
+    /// </summary>
+    /// <returns>A <see cref="QueueReader{T}"/> exposing the read-side operations (<see cref="TryRead"/>,
+    /// <see cref="IsCompleted"/>, <see cref="Count"/>) without granting write access.</returns>
+    public QueueReader<T> Reader => new(this);
+
+    /// <summary>
+    /// Gets the write-side role view of the queue.
+    /// </summary>
+    /// <returns>A <see cref="QueueWriter{T}"/> exposing the write-side operations (<see cref="TryWrite"/>,
+    /// <see cref="TryComplete"/>, <see cref="Count"/>) without granting read access.</returns>
+    public QueueWriter<T> Writer => new(this);
 }

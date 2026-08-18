@@ -1,16 +1,16 @@
-using Steelax.Toolkit.HighPerformance.Concurrency;
+using Steelax.Toolkit.HighPerformance.Concurrency.Channels;
 
-namespace Steelax.Toolkit.HighPerformance.Tests.Concurrency;
+namespace Steelax.Toolkit.HighPerformance.Tests.Concurrency.Channels;
 
-/// <summary>Tests for the writer-subscription variant <see cref="EventWriteQueue{T}"/>.</summary>
-public static class EventWriteQueueTests
+/// <summary>Tests for the writer-subscription variant <see cref="SpscChannelReader{T}"/>.</summary>
+public static class SpscChannelReaderTests
 {
     public sealed class Subscription
     {
         [Fact]
         public void OnWriteReady_RaisedWhenFullSlotFreed()
         {
-            var queue = new EventWriteQueue<int>(1);
+            var queue = new SpscChannelReader<int>(1);
             Assert.True(queue.TryWrite(1));
 
             var raised = 0;
@@ -24,7 +24,7 @@ public static class EventWriteQueueTests
         [Fact]
         public void OnWriteReady_NotRaisedWhenNotFull()
         {
-            var queue = new EventWriteQueue<int>(4);
+            var queue = new SpscChannelReader<int>(4);
             Assert.True(queue.TryWrite(1));
             Assert.True(queue.TryWrite(2));
 
@@ -41,7 +41,7 @@ public static class EventWriteQueueTests
         [Fact]
         public void OnWriteReady_EdgeTriggeredOnFullToFreeTransition()
         {
-            var queue = new EventWriteQueue<int>(1);
+            var queue = new SpscChannelReader<int>(1);
             Assert.True(queue.TryWrite(1));
 
             var raised = 0;
@@ -59,7 +59,7 @@ public static class EventWriteQueueTests
         [Fact]
         public async Task ReaderWaitsUntilData_ThenReads()
         {
-            var queue = new EventWriteQueue<int>(4);
+            var queue = new SpscChannelReader<int>(4);
 
             var wait = queue.WaitToReadAsync();
             await Task.Delay(50, TestContext.Current.CancellationToken);

@@ -1,6 +1,6 @@
 ﻿using Steelax.Toolkit.HighPerformance.Concurrency.Primitives;
 
-namespace Steelax.Toolkit.HighPerformance.Concurrency;
+namespace Steelax.Toolkit.HighPerformance.Concurrency.Channels;
 
 /// <summary>
 /// A bounded, lock-free SPSC queue for subscription-based reading: the reader observes readiness via
@@ -14,7 +14,7 @@ namespace Steelax.Toolkit.HighPerformance.Concurrency;
 /// <see langword="false"/>, they are scheduled asynchronously.
 /// </param>
 [PublicAPI]
-public class EventReadQueue<T>(int capacity, bool allowSynchronousContinuations = true) : SpscQueue<T>(capacity)
+public sealed class SpscChannelWriter<T>(int capacity, bool allowSynchronousContinuations = true) : SpscQueue<T>(capacity)
 {
     private readonly CompleteSignal _writerSignal = new(allowSynchronousContinuations);
 
@@ -38,8 +38,7 @@ public class EventReadQueue<T>(int capacity, bool allowSynchronousContinuations 
     /// A <see cref="ValueTask"/> that completes when the queue has free capacity; a completed task is
     /// returned when there is already room or the stream is over.
     /// </returns>
-    [PublicAPI]
-    public ValueTask WaitToWriteAsync()
+    protected internal override ValueTask WaitToWriteAsync()
     {
         while (true)
         {
@@ -57,4 +56,11 @@ public class EventReadQueue<T>(int capacity, bool allowSynchronousContinuations 
             return _writerSignal.WaitAsync();
         }
     }
+    
+    /// <summary>
+    /// Gets the write-side role view of the channel, exposing asynchronous write readiness
+    /// (<see cref="ChannelWriter{T}.WaitToWriteAsync"/>) alongside the core write operations.
+    /// </summary>
+    /// <returns>A <see cref="ChannelWriter{T}"/> that waits for free capacity, writes, and completes the stream.</returns>
+    public new ChannelWriter<T> Writer => new(this);
 }

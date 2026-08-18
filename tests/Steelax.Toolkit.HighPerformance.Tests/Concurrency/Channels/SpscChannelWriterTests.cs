@@ -1,16 +1,16 @@
-using Steelax.Toolkit.HighPerformance.Concurrency;
+using Steelax.Toolkit.HighPerformance.Concurrency.Channels;
 
-namespace Steelax.Toolkit.HighPerformance.Tests.Concurrency;
+namespace Steelax.Toolkit.HighPerformance.Tests.Concurrency.Channels;
 
-/// <summary>Tests for the reader-subscription variant <see cref="EventReadQueue{T}"/>.</summary>
-public static class EventReadQueueTests
+/// <summary>Tests for the reader-subscription variant <see cref="SpscChannelWriter{T}"/>.</summary>
+public static class SpscChannelWriterTests
 {
     public sealed class Subscription
     {
         [Fact]
         public async Task OnReadReady_RaisedOnFirstInsert()
         {
-            var queue = new EventReadQueue<int>(4);
+            var queue = new SpscChannelWriter<int>(4);
             var raised = 0;
             queue.OnReadReady += () => raised++;
 
@@ -29,7 +29,7 @@ public static class EventReadQueueTests
         [Fact]
         public async Task OnReadReady_RaisedOnComplete()
         {
-            var queue = new EventReadQueue<int>(4);
+            var queue = new SpscChannelWriter<int>(4);
             var raised = 0;
             queue.OnReadReady += () => raised++;
 
@@ -40,7 +40,7 @@ public static class EventReadQueueTests
         [Fact]
         public async Task OnReadReady_WakesSubscriptionToDrain()
         {
-            var queue = new EventReadQueue<int>(1);
+            var queue = new SpscChannelWriter<int>(1);
             var signal = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
             var collected = new List<int>();
             queue.OnReadReady += () => signal.TrySetResult();
@@ -58,7 +58,7 @@ public static class EventReadQueueTests
         [Fact]
         public async Task WriterWaitsUntilCapacity_ThenWrites()
         {
-            var queue = new EventReadQueue<int>(1);
+            var queue = new SpscChannelWriter<int>(1);
             Assert.True(queue.TryWrite(1));
 
             var wait = queue.WaitToWriteAsync();

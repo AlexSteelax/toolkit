@@ -1,6 +1,6 @@
 ﻿using Steelax.Toolkit.HighPerformance.Concurrency.Primitives;
 
-namespace Steelax.Toolkit.HighPerformance.Concurrency;
+namespace Steelax.Toolkit.HighPerformance.Concurrency.Channels;
 
 /// <summary>
 /// A bounded, lock-free SPSC queue for subscription-based writing: the writer observes readiness via
@@ -14,7 +14,7 @@ namespace Steelax.Toolkit.HighPerformance.Concurrency;
 /// <see langword="false"/>, they are scheduled asynchronously.
 /// </param>
 [PublicAPI]
-public class EventWriteQueue<T>(int capacity, bool allowSynchronousContinuations = true) : SpscQueue<T>(capacity)
+public sealed class SpscChannelReader<T>(int capacity, bool allowSynchronousContinuations = true) : SpscQueue<T>(capacity)
 {
     private readonly CompleteSignal _readerSignal = new(allowSynchronousContinuations);
 
@@ -38,8 +38,7 @@ public class EventWriteQueue<T>(int capacity, bool allowSynchronousContinuations
     /// A <see cref="ValueTask"/> that completes when the queue is readable; a completed task is returned
     /// when a value is already available or the stream is over.
     /// </returns>
-    [PublicAPI]
-    public ValueTask WaitToReadAsync()
+    protected internal override ValueTask WaitToReadAsync()
     {
         while (true)
         {
@@ -57,4 +56,11 @@ public class EventWriteQueue<T>(int capacity, bool allowSynchronousContinuations
             return _readerSignal.WaitAsync();
         }
     }
+    
+    /// <summary>
+    /// Gets the read-side role view of the channel, exposing asynchronous read readiness
+    /// (<see cref="ChannelReader{T}.WaitToReadAsync"/>) alongside the core read operations.
+    /// </summary>
+    /// <returns>A <see cref="ChannelReader{T}"/> that waits for data (or the end of the stream) and reads.</returns>
+    public new ChannelReader<T> Reader => new(this);
 }

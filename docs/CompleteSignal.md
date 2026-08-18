@@ -52,7 +52,7 @@ else
 
 ## Notes
 
-- `CompleteSignal` is the readiness core behind the await-based members of [`SpscChannel<T>`](SpscQueue.md), [`EventReadQueue<T>`](SpscQueue.md) and [`EventWriteQueue<T>`](SpscQueue.md).
+- `CompleteSignal` is the readiness core behind the await-based members of [`SpscChannel<T>`](SpscQueue.md), [`SpscChannelReader<T>`](SpscQueue.md) and [`SpscChannelWriter<T>`](SpscQueue.md).
 - The `ValueTask` returned by `WaitAsync` is bound to an internal `IValueTaskSource` version token; await each returned `ValueTask` only once.
 
 ## See also

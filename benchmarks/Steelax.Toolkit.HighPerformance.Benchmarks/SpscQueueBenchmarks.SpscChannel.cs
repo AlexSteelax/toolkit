@@ -1,12 +1,13 @@
 ﻿using BenchmarkDotNet.Attributes;
 using Steelax.Toolkit.HighPerformance.Concurrency;
+using Steelax.Toolkit.HighPerformance.Concurrency.Channels;
 
 namespace Steelax.Toolkit.HighPerformance.Benchmarks;
 
 public partial class SpscQueueBenchmarks
 {
-    [Benchmark(OperationsPerInvoke = 1_000)]
-    public Task SpscChannel_Async_1k() => SpscChannel(1_000, Capacity, allowSynchronousContinuations: false);
+    // [Benchmark(OperationsPerInvoke = 1_000)]
+    // public Task SpscChannel_Async_1k() => SpscChannel(1_000, Capacity, allowSynchronousContinuations: false);
     
     [Benchmark(OperationsPerInvoke = 1_000_000)]
     public Task SpscChannel_Sync_1kk() => SpscChannel(1_000_000, Capacity, allowSynchronousContinuations: true);
@@ -22,24 +23,24 @@ public partial class SpscQueueBenchmarks
         {
             for (var i = 0; i < count; i++)
             {
-                while (!queue.TryWrite(i))
-                    await queue.WaitToWriteAsync();
+                while (!queue.Writer.TryWrite(i))
+                    await queue.Writer.WaitToWriteAsync();
             }
 
-            queue.TryComplete();
+            queue.Writer.TryComplete();
         }, TaskCreationOptions.LongRunning).Unwrap();
 
         var consumer = Task.Factory.StartNew(async () =>
         {
             while (true)
             {
-                if (queue.TryRead(out _))
+                if (queue.Reader.TryRead(out _))
                     continue;
 
-                if (queue.IsCompleted)
+                if (queue.Reader.IsCompleted)
                     break;
                 
-                await queue.WaitToReadAsync();
+                await queue.Reader.WaitToReadAsync();
             }
         }, TaskCreationOptions.LongRunning).Unwrap();
 
@@ -56,11 +57,11 @@ public partial class SpscQueueBenchmarks
 
             for (var i = 0; i < count; i++)
             {
-                while (!queue.TryWrite(i))
+                while (!queue.Writer.TryWrite(i))
                     spin.SpinOnce(10);
             }
 
-            queue.TryComplete();
+            queue.Writer.TryComplete();
         }, TaskCreationOptions.LongRunning);
 
 
@@ -68,13 +69,13 @@ public partial class SpscQueueBenchmarks
         {
             while (true)
             {
-                if (queue.TryRead(out _))
+                if (queue.Reader.TryRead(out _))
                     continue;
 
-                if (queue.IsCompleted)
+                if (queue.Reader.IsCompleted)
                     break;
                 
-                await queue.WaitToReadAsync();
+                await queue.Reader.WaitToReadAsync();
             }
         }, TaskCreationOptions.LongRunning).Unwrap();
 

@@ -29,8 +29,8 @@ public partial class SpscQueueBenchmarks
             AddLogicalGroupRules(BenchmarkLogicalGroupRule.ByParams);
             AddJob(Job.Default
                 .WithWarmupCount(2)
-                .WithMinIterationCount(5)
-                .WithMaxIterationCount(20));
+                .WithMinIterationCount(10)
+                .WithMaxIterationCount(50));
         }
     }
     /// <summary>Buffer capacity (number of buffered values).</summary>
