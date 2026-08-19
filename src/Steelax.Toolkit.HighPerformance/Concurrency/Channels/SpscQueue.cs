@@ -53,10 +53,10 @@ public class SpscQueue<T>
     private bool _completed;
 
     /// <summary>The number of items enqueued and fully published by the writer (written only by the writer).</summary>
-    internal uint WriterSeq;
+    protected internal uint WriterSeq;
 
     /// <summary>The number of items consumed by the reader (written only by the reader).</summary>
-    internal uint ReaderSeq;
+    protected internal uint ReaderSeq;
 
     /// <summary>
     /// Initializes a new bounded, lock-free single-producer/single-consumer queue.
