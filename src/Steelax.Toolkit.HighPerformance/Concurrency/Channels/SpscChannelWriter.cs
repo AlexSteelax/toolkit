@@ -1,66 +1,59 @@
-﻿using Steelax.Toolkit.HighPerformance.Concurrency.Primitives;
+﻿using System.Diagnostics.CodeAnalysis;
+using Steelax.Toolkit.HighPerformance.Concurrency.Primitives;
 
 namespace Steelax.Toolkit.HighPerformance.Concurrency.Channels;
 
 /// <summary>
-/// A bounded, lock-free SPSC queue for subscription-based reading: the reader observes readiness via
-/// <see cref="OnReadReady"/> (raised when data or the end of the stream becomes available), while the
-/// writer waits via <see cref="WaitToWriteAsync"/>.
+/// A bounded, lock-free SPSC queue for subscription-based reading: the writer waits via
+/// <see cref="WaitToWriteAsync"/>, while the reader observes data availability (or the end of the
+/// stream) via the <see cref="OnReadReady"/> event.
 /// </summary>
+/// <inheritdoc cref="SpscCoreQueue{T}"/>
 /// <typeparam name="T">The type of buffered values.</typeparam>
 /// <param name="capacity">The maximum number of buffered items (must be positive).</param>
-/// <param name="allowSynchronousContinuations">
-/// When <see langword="true"/> (default), continuations may run inline on the signalling thread; when
-/// <see langword="false"/>, they are scheduled asynchronously.
-/// </param>
 [PublicAPI]
-public sealed class SpscChannelWriter<T>(int capacity, bool allowSynchronousContinuations = true) : SpscQueue<T>(capacity)
+public sealed class SpscChannelWriter<T>(int capacity) : SpscCoreQueue<T>(capacity)
 {
-    private readonly CompleteSignal _writerSignal = new(allowSynchronousContinuations);
+    private readonly CompleteSignal _writerSignal = new();
 
-    /// <summary>Raised when a value becomes available or the stream ends (edge-triggered).</summary>
+    /// <summary>
+    /// Raised on the writer side when a value becomes available or the stream ends, notifying the reader
+    /// to re-check the queue (edge-triggered).
+    /// </summary>
     [PublicAPI]
     public event Action? OnReadReady;
 
-    /// <summary>Raises <see cref="OnReadReady"/> when the queue becomes readable.</summary>
-    protected override void OnFirstInsertOrComplete() => OnReadReady?.Invoke();
-
-    /// <summary>Wakes a writer when a slot of a full buffer is freed.</summary>
-    protected override void OnFreeSpace() => _writerSignal.Signal();
-
-    /// <summary>Clears a stale writer signal when the buffer is filled, so the next read re-raises it.</summary>
+    /// <inheritdoc cref="SpscCoreQueue{T}.OnReadable"/>
+    protected override void OnReadable() => OnReadReady?.Invoke();
+    /// <inheritdoc cref="SpscCoreQueue{T}.OnWritable"/>
+    protected override void OnWritable() => _writerSignal.Signal();
+    /// <inheritdoc cref="SpscCoreQueue{T}.OnFilled"/>
     protected override void OnFilled() => _writerSignal.TryReset();
+    /// <inheritdoc cref="SpscCoreQueue{T}.OnCompleted"/>
+    protected override void OnCompleted() => _writerSignal.Complete();
 
-    /// <summary>
-    /// Waits until capacity is available, without blocking the calling thread.
-    /// </summary>
-    /// <returns>
-    /// A <see cref="ValueTask"/> that completes when the queue has free capacity; a completed task is
-    /// returned when there is already room or the stream is over.
-    /// </returns>
-    protected internal override ValueTask WaitToWriteAsync()
-    {
-        while (true)
-        {
-            // Room is already available, or the stream is over — no need to wait.
-            if (WriterSeq - Volatile.Read(ref ReaderSeq) < Capacity || IsCompleted)
-                return ValueTask.CompletedTask;
-
-            // A signal is raised but no room is available yet (it was consumed earlier): clear the
-            // stale signal and re-check, so a signal raised between the check and the reset is not lost.
-            if (_writerSignal.TryReset())
-                continue;
-
-            // No signal raised: register a wait. WaitAsync does not consume a concurrently raised
-            // signal — it completes synchronously and the loop re-checks the queue.
-            return _writerSignal.WaitAsync();
-        }
-    }
+    /// <inheritdoc cref="SpscCoreQueue{T}.TryRead"/>
+    [PublicAPI]
+    public new bool TryRead([MaybeNullWhen(false)] out T value) => base.TryRead(out value);
     
-    /// <summary>
-    /// Gets the write-side role view of the channel, exposing asynchronous write readiness
-    /// (<see cref="ChannelWriter{T}.WaitToWriteAsync"/>) alongside the core write operations.
-    /// </summary>
-    /// <returns>A <see cref="ChannelWriter{T}"/> that waits for free capacity, writes, and completes the stream.</returns>
-    public new ChannelWriter<T> Writer => new(this);
+    /// <inheritdoc cref="SpscCoreQueue{T}.TryPeek"/>
+    [PublicAPI]
+    public new bool TryPeek([MaybeNullWhen(false)] out T value) => base.TryPeek(out value);
+    
+    /// <inheritdoc cref="SpscCoreQueue{T}.TryWrite"/>
+    [PublicAPI]
+    public new bool TryWrite(T item) => base.TryWrite(item);
+    
+    /// <inheritdoc cref="SpscCoreQueue{T}.TryComplete"/>
+    [PublicAPI]
+    public new bool TryComplete(Exception? ex = null) => base.TryComplete(ex);
+    
+    /// <inheritdoc cref="SpscCoreQueue{T}.TryTerminate"/>
+    [PublicAPI]
+    public new bool TryTerminate(Exception ex) => base.TryTerminate(ex);
+    
+    /// <summary>Waits until capacity is available (writer side).</summary>
+    /// <inheritdoc cref="SpscCoreQueue{T}.WaitToWriteAsync(CompleteSignal)"/>
+    [PublicAPI]
+    public ValueTask<bool> WaitToWriteAsync() => WaitToWriteAsync(_writerSignal);
 }

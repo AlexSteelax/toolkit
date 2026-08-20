@@ -58,10 +58,38 @@ public static partial class SpscChannelTests
 
             Assert.True(channel.TryComplete());
 
-            await wait;
+            // The reader wakes with false — the stream has ended.
+            Assert.False(await wait);
 
             Assert.False(channel.TryRead(out _));
             Assert.True(channel.IsCompleted);
+        }
+
+        [Fact]
+        public async Task WaitToReadAsync_AlreadyCompleted_ReturnsFalse()
+        {
+            var channel = new SpscChannel<int>(4);
+            channel.TryComplete();
+
+            Assert.False(await channel.WaitToReadAsync());
+        }
+
+        [Fact]
+        public async Task WaitToWriteAsync_AlreadyCompleted_ReturnsFalse()
+        {
+            var channel = new SpscChannel<int>(4);
+            channel.TryComplete();
+
+            Assert.False(await channel.WaitToWriteAsync());
+        }
+
+        [Fact]
+        public async Task WaitToReadAsync_DataAvailable_ReturnsTrue()
+        {
+            var channel = new SpscChannel<int>(4);
+            Assert.True(channel.TryWrite(1));
+
+            Assert.True(await channel.WaitToReadAsync());
         }
 
         [Fact]

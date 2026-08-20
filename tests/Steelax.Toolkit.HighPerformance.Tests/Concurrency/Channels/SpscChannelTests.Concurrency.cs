@@ -8,24 +8,23 @@ public static partial class SpscChannelTests
     /// <summary>Load tests exercising the read/write readiness signals under contention.</summary>
     public sealed class Concurrency(ITestOutputHelper output)
     {
-        [Theory(Timeout = 10000)]
-        [InlineData(20, 1, true)]
-        [InlineData(50, 4, true)]
-        [InlineData(200, 32, false)]
-        [InlineData(3000, 512, true)]
-        public async Task ConcurrentProducerConsumer_InputMatchesOutput(int count, int capacity, bool allowSynchronousContinuations)
+        [Theory(Timeout = 1000)]
+        [InlineData(200, 1)]
+        [InlineData(500, 4)]
+        [InlineData(2000, 16)]
+        [InlineData(30000, 512)]
+        public async Task ConcurrentProducerConsumer_InputMatchesOutput(int count, int capacity)
         {
             var watch = Stopwatch.StartNew();
-            var channel = new SpscChannel<int>(capacity, allowSynchronousContinuations);
+            var channel = new SpscChannel<int>(capacity);
 
-            var producer = Task.Factory.StartNew(() =>
+            var producer = Task.Factory.StartNew(async () =>
             {
-                var spin = new SpinWait();
-
                 for (var i = 0; i < count; i++)
                 {
                     while (!channel.TryWrite(i))
-                        spin.SpinOnce(10);
+                        if (!await channel.WaitToWriteAsync())
+                            break;
                 }
 
                 channel.TryComplete();
@@ -87,6 +86,58 @@ public static partial class SpscChannelTests
             channel.TryComplete();
 
             Assert.True(await consumer);
+        }
+
+        [Fact(Timeout = 5000)]
+        public async Task ConcurrentTerminate_SpinningWriter_ThrowsOnWrite()
+        {
+            const int capacity = 4;
+            var channel = new SpscChannel<int>(capacity);
+            var ex = new InvalidOperationException("watchdog abort");
+
+            // Writer spins forever via Thread.Yield (no async wait): after TryTerminate, the next
+            // TryWrite throws the termination exception.
+            var writer = Task.Factory.StartNew(() =>
+            {
+                for (var i = 0; ; i++)
+                {
+                    while (!channel.TryWrite(i))
+                        Thread.Yield();
+                }
+            }, TaskCreationOptions.LongRunning);
+
+            await Task.Delay(250, TestContext.Current.CancellationToken);
+            Assert.True(channel.TryTerminate(ex));
+
+            var thrown = await Assert.ThrowsAsync<InvalidOperationException>(async () => await writer);
+            Assert.Same(ex, thrown);
+        }
+
+        [Fact(Timeout = 5000)]
+        public async Task ConcurrentTerminate_SpinningReader_ThrowsOnRead()
+        {
+            const int capacity = 4;
+            var channel = new SpscChannel<int>(capacity);
+            var ex = new InvalidOperationException("watchdog abort");
+
+            // Reader spins forever via Thread.Yield (no async wait): after TryTerminate, the next
+            // TryRead throws the termination exception.
+            var reader = Task.Factory.StartNew(() =>
+            {
+                while (true)
+                {
+                    if (channel.TryRead(out _))
+                        continue;
+
+                    Thread.Yield();
+                }
+            }, TaskCreationOptions.LongRunning);
+
+            await Task.Delay(250, TestContext.Current.CancellationToken);
+            Assert.True(channel.TryTerminate(ex));
+
+            var thrown = await Assert.ThrowsAsync<InvalidOperationException>(async () => await reader);
+            Assert.Same(ex, thrown);
         }
     }
 }

@@ -17,10 +17,9 @@ public static partial class SpscChannelTests
                 continue;
             }
 
-            if (channel.IsCompleted)
+            // WaitToReadAsync returns false when the stream has ended.
+            if (!await channel.WaitToReadAsync())
                 break;
-
-            await channel.WaitToReadAsync();
         }
 
         return result;

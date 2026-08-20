@@ -28,7 +28,7 @@ public partial class SpscQueueBenchmarks
         {
             AddLogicalGroupRules(BenchmarkLogicalGroupRule.ByParams);
             AddJob(Job.Default
-                .WithWarmupCount(2)
+                .WithWarmupCount(5)
                 .WithMinIterationCount(10)
                 .WithMaxIterationCount(50));
         }
@@ -36,4 +36,6 @@ public partial class SpscQueueBenchmarks
     /// <summary>Buffer capacity (number of buffered values).</summary>
     [Params(4, 16, 64, 256, 512)]
     public int Capacity { get; set; }
+
+    public const int Count = 100_000_000;
 }

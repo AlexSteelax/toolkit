@@ -17,7 +17,7 @@ A family of **bounded, lock-free single-producer/single-consumer FIFO buffers** 
 - **Single-producer / single-consumer (SPSC)** — one writer drives the write side, one reader drives the read side. The roles are separated into `Writer` and `Reader` views: a writer cannot call read operations and vice versa. Access from other threads is not supported.
 - **Bounded** — a fixed capacity; writes are rejected (return `false`) while the buffer is full.
 - **Counter-based transfer** — the core is a fixed-size circular buffer of power-of-two length. Availability is modelled as a pair of monotonically increasing counters (`WriterSeq` / `ReaderSeq`, `uint`, modular 2³²); the writer publishes an item (`WriterSeq++`, release) only after writing it, and the reader consumes only while `WriterSeq - ReaderSeq > 0`. Wrap-around is natural — all checks use the delta.
-- **Readiness hooks** — the core exposes `OnFirstInsertOrComplete` (first item written or stream completed), `OnFreeSpace` (a slot of a full buffer freed), `OnDrained` and `OnFilled`; derived channel types layer a signal or an event on top.
+- **Readiness hooks** — the core exposes `OnReadable` (first item written, or stream ended), `OnWritable` (a slot of a full buffer freed), `OnDrained` and `OnFilled`; derived channel types layer a signal or an event on top.
 - **Edge-triggered** — readiness is raised only on transitions, not on every operation.
 
 ## Variants
@@ -100,8 +100,8 @@ The underlying core members are `protected internal` and are reached through the
 
 | Role view | Members |
 |-----------|---------|
-| `QueueReader<T>` / `ChannelReader<T>` | `bool TryRead(out T value)`, `bool IsReadable`, `bool IsCompleted`, `int Count` (+ `ValueTask WaitToReadAsync()` for channel readers) |
-| `QueueWriter<T>` / `ChannelWriter<T>` | `bool TryWrite(T item)`, `bool TryComplete(Exception? ex = null)`, `bool IsWritable`, `int Count` (+ `ValueTask WaitToWriteAsync()` for channel writers) |
+| `QueueReader<T>` / `ChannelReader<T>` | `bool TryRead(out T value)`, `bool TryPeek(out T value)`, `bool IsCompleted`, `int Count` (+ `ValueTask<bool> WaitToReadAsync()` for channel readers) |
+| `QueueWriter<T>` / `ChannelWriter<T>` | `bool TryWrite(T item)`, `bool TryComplete(Exception? ex = null)` (+ `ValueTask<bool> WaitToWriteAsync()` for channel writers) |
 
 ### Core members
 
@@ -109,13 +109,33 @@ The underlying core members are `protected internal` and are reached through the
 |--------|-------------|
 | `bool TryWrite(T item)` | Enqueues an item. Returns `true` on success; `false` when the buffer is full. A write to a **closed** stream throws `InvalidOperationException`. |
 | `bool TryRead([MaybeNullWhen(false)] out T value)` | Attempts to read a value without blocking. Returns `false` when the buffer is empty (check `IsCompleted` to distinguish an ended stream); rethrows the completion exception if the stream was faulted. |
+| `bool TryPeek([MaybeNullWhen(false)] out T value)` | Peeks the head value without consuming it. Returns `false` when the buffer is empty; mirrors `TryRead`'s terminal behavior (completion latch and fault propagation). Does not raise readiness hooks. |
 | `bool TryComplete(Exception? ex = null)` | Closes the stream; further writes throw and subsequent reads observe the end of the stream (or rethrow `ex`). |
-| `bool IsReadable` | Best-effort check that the buffer holds at least one item — a `TryRead` would succeed. |
-| `bool IsWritable` | Best-effort check that the buffer has at least one free slot — a `TryWrite` would not be rejected. |
+| `bool TryTerminate(Exception ex)` | **Hard abort** — immediately latches completion (unlike `TryComplete`, buffered data is not drained) and stores `ex`; the next `TryRead`/`TryWrite` rethrows it. Designed to be called from a watchdog thread. |
 | `bool IsCompleted` | `true` when the stream ended and the buffer is empty. |
 | `int Count` | Best-effort number of buffered items (delta of the counters). |
+| `int Version` | Monotonic activity counter for watchdog liveness checks: incremented by the writer on each write (and on completion), and by the reader while draining a closed stream's tail. |
+
+### Watchdog pattern
+
+Because `Version` advances on both sides (writer while open, reader while draining a closed stream's tail), an external watchdog can detect a stalled producer/consumer and hard-abort:
+
+```csharp
+var channel = new SpscChannel<int>(4);
+
+// ... start producer/consumer ...
+
+long last = channel.Version;
+await Task.Delay(timeout, ct);
+
+// No progress → abort; both sides observe the exception on the next TryRead/TryWrite.
+if (channel.Version == last)
+    channel.TryTerminate(new TimeoutException("no progress"));
+```
 
 ### Readiness (per variant)
+
+`WaitToReadAsync`/`WaitToWriteAsync` return `ValueTask<bool>`: `true` = try the operation (data available / capacity free), `false` = the stream has ended.
 
 | Variant | Members |
 |---------|---------|
@@ -152,9 +172,10 @@ while (true)
         collected.Add(value);
         continue;
     }
-    if (reader.IsCompleted)
+
+    // WaitToReadAsync returns false when the stream has ended.
+    if (!await reader.WaitToReadAsync())
         break;
-    await reader.WaitToReadAsync();
 }
 
 await producer;
@@ -163,7 +184,7 @@ await producer;
 ## Notes
 
 - Role views are `readonly struct`s holding a single reference: they add **zero allocation and zero boxing**, and the thin forwarders inline away on the hot path. The same structure allows adapting them to interfaces via generic wrappers (`where T : struct, I{...}`).
-- A `ValueTask` returned by `WaitToReadAsync`/`WaitToWriteAsync` is bound to an internal `IValueTaskSource` version token (via [`CompleteSignal`](../src/Steelax.Toolkit.HighPerformance/Concurrency/Primitives/CompleteSignal.cs)). Await each `ValueTask` only once.
+- A `ValueTask<bool>` returned by `WaitToReadAsync`/`WaitToWriteAsync` is bound to an internal `IValueTaskSource<bool>` version token (via [`CompleteSignal`](../src/Steelax.Toolkit.HighPerformance/Concurrency/Primitives/CompleteSignal.cs)). Await each `ValueTask<bool>` only once.
 - `TryRead` rethrows the captured completion exception (from `TryComplete(ex)`), mirroring fault propagation to the consumer.
 - The family is **not** an `IAsyncConsumator<T>` implementation — it exposes consumator-style APIs with the same method shapes.
 

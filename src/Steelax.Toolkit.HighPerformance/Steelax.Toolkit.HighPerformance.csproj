@@ -20,8 +20,8 @@
         <InternalsVisibleTo Include="Steelax.Toolkit.HighPerformance.Tests" />
     </ItemGroup>
 
-    <ItemGroup>
-      <None Remove="repomix-output.md" />
-    </ItemGroup>
+    <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
+        <DefineConstants>DEBUG</DefineConstants>
+    </PropertyGroup>
 
 </Project>
