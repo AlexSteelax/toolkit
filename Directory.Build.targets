@@ -1,0 +1,6 @@
+<Project>
+    <!-- Strip TRACE and DEBUG symbols in Release builds -->
+    <PropertyGroup Condition="'$(Configuration)' == 'Release'">
+        <DefineConstants>RELEASE</DefineConstants>
+    </PropertyGroup>
+</Project>
