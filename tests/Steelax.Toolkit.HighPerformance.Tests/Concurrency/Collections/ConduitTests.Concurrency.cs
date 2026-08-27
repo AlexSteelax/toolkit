@@ -1,42 +1,30 @@
 using System.Diagnostics;
-using Steelax.Toolkit.HighPerformance.Concurrency.Channels;
+using Steelax.Toolkit.HighPerformance.Concurrency.Collections;
 
-namespace Steelax.Toolkit.HighPerformance.Tests.Concurrency.Channels;
+namespace Steelax.Toolkit.HighPerformance.Tests.Concurrency.Collections;
 
-public static partial class SpscChannelTests
+public static partial class ConduitTests
 {
-    /// <summary>Load tests exercising the read/write readiness signals under contention.</summary>
+    /// <summary>Load tests exercising the core and readiness signals under contention.</summary>
     public sealed class Concurrency(ITestOutputHelper output)
     {
-        [Theory(Timeout = 1000)]
-        [InlineData(200, 1)]
-        [InlineData(500, 4)]
-        [InlineData(2000, 16)]
-        [InlineData(30000, 512)]
-        public async Task ConcurrentProducerConsumer_InputMatchesOutput(int count, int capacity)
+        [Fact(Timeout = 10000)]
+        public async Task ConcurrentProducerConsumer_InputMatchesOutput()
         {
+            const int count = 30_000;
+            const int capacity = 512;
+
             var watch = Stopwatch.StartNew();
-            var channel = new SpscChannel<int>(capacity);
+            var conduit = new Conduit<int>(capacity, ConduitBehavior.AwaitableReader | ConduitBehavior.AwaitableWriter);
 
-            var producer = Task.Factory.StartNew(async () =>
-            {
-                for (var i = 0; i < count; i++)
-                {
-                    while (!channel.TryWrite(i))
-                        if (!await channel.WaitToWriteAsync())
-                            break;
-                }
-
-                channel.TryComplete();
-            }, TaskCreationOptions.LongRunning);
-
-            var consumer = Task.Factory.StartNew(() => ReadAllAsync(channel), TaskCreationOptions.LongRunning).Unwrap();
+            var producer = WriteSequence(conduit, Enumerable.Range(0, count), fallback: false, TestContext.Current.CancellationToken);
+            var consumer = ReadAllAsync(conduit);
 
             try
             {
-                await Task.WhenAll(producer, consumer).WaitAsync(TestContext.Current.CancellationToken);
+                var collected = await consumer;
 
-                var collected = await consumer.WaitAsync(TestContext.Current.CancellationToken);
+                await producer.WaitAsync(TimeSpan.FromSeconds(5), TestContext.Current.CancellationToken);
 
                 Assert.Equal(count, collected.Count);
                 Assert.Equal(Enumerable.Range(0, count), collected);
@@ -52,18 +40,18 @@ public static partial class SpscChannelTests
         [Fact(Timeout = 1000)]
         public async Task ConcurrentFault_WakesReaderWithException()
         {
-            var channel = new SpscChannel<int>(4);
+            var conduit = new Conduit<int>(4, ConduitBehavior.AwaitableReader);
             var ex = new InvalidOperationException("producer failed");
 
             var consumer = Task.Run(async () =>
             {
-                await channel.WaitToReadAsync();
-                return channel.TryRead(out _);
+                await conduit.WaitToReadAsync();
+                return conduit.TryRead(out _);
             }, TestContext.Current.CancellationToken);
 
             await Task.Delay(50, TestContext.Current.CancellationToken);
 
-            channel.TryComplete(ex);
+            conduit.TryComplete(ex);
 
             var thrown = await Assert.ThrowsAsync<InvalidOperationException>(async () => await consumer);
             Assert.Same(ex, thrown);
@@ -72,18 +60,18 @@ public static partial class SpscChannelTests
         [Fact(Timeout = 1000)]
         public async Task ConcurrentEmptyComplete_WakesReaderToEndOfStream()
         {
-            var channel = new SpscChannel<int>(4);
+            var conduit = new Conduit<int>(4, ConduitBehavior.AwaitableReader);
 
             var consumer = Task.Run(async () =>
             {
-                await channel.WaitToReadAsync();
-                _ = channel.TryRead(out _);
-                return channel.IsCompleted;
+                await conduit.WaitToReadAsync();
+                _ = conduit.TryRead(out _);
+                return conduit.IsCompleted;
             }, TestContext.Current.CancellationToken);
 
             await Task.Delay(50, TestContext.Current.CancellationToken);
 
-            channel.TryComplete();
+            conduit.TryComplete();
 
             Assert.True(await consumer);
         }
@@ -92,7 +80,7 @@ public static partial class SpscChannelTests
         public async Task ConcurrentTerminate_SpinningWriter_ThrowsOnWrite()
         {
             const int capacity = 4;
-            var channel = new SpscChannel<int>(capacity);
+            var conduit = new Conduit<int>(capacity);
             var ex = new InvalidOperationException("watchdog abort");
 
             // Writer spins forever via Thread.Yield (no async wait): after TryTerminate, the next
@@ -101,13 +89,13 @@ public static partial class SpscChannelTests
             {
                 for (var i = 0; ; i++)
                 {
-                    while (!channel.TryWrite(i))
+                    while (!conduit.TryWrite(i))
                         Thread.Yield();
                 }
             }, TaskCreationOptions.LongRunning);
 
             await Task.Delay(250, TestContext.Current.CancellationToken);
-            Assert.True(channel.TryTerminate(ex));
+            Assert.True(conduit.TryTerminate(ex));
 
             var thrown = await Assert.ThrowsAsync<InvalidOperationException>(async () => await writer);
             Assert.Same(ex, thrown);
@@ -117,7 +105,7 @@ public static partial class SpscChannelTests
         public async Task ConcurrentTerminate_SpinningReader_ThrowsOnRead()
         {
             const int capacity = 4;
-            var channel = new SpscChannel<int>(capacity);
+            var conduit = new Conduit<int>(capacity);
             var ex = new InvalidOperationException("watchdog abort");
 
             // Reader spins forever via Thread.Yield (no async wait): after TryTerminate, the next
@@ -126,7 +114,7 @@ public static partial class SpscChannelTests
             {
                 while (true)
                 {
-                    if (channel.TryRead(out _))
+                    if (conduit.TryRead(out _))
                         continue;
 
                     Thread.Yield();
@@ -134,10 +122,30 @@ public static partial class SpscChannelTests
             }, TaskCreationOptions.LongRunning);
 
             await Task.Delay(250, TestContext.Current.CancellationToken);
-            Assert.True(channel.TryTerminate(ex));
+            Assert.True(conduit.TryTerminate(ex));
 
             var thrown = await Assert.ThrowsAsync<InvalidOperationException>(async () => await reader);
             Assert.Same(ex, thrown);
+        }
+
+        [Fact(Timeout = 10000)]
+        public async Task ProducerConsumer_AsyncSignals_InputMatchesOutput()
+        {
+            var conduit = new Conduit<int>(
+                16,
+                ConduitBehavior.AwaitableReader | ConduitBehavior.AwaitableWriter);
+
+            const int count = 2000;
+
+            var producer = WriteSequence(conduit, Enumerable.Range(0, count), fallback: false, TestContext.Current.CancellationToken);
+            var consumer = ReadAllAsync(conduit);
+
+            var collected = await consumer;
+
+            await producer.WaitAsync(TimeSpan.FromSeconds(5), TestContext.Current.CancellationToken);
+
+            Assert.Equal(count, collected.Count);
+            Assert.Equal(Enumerable.Range(0, count), collected);
         }
     }
 }

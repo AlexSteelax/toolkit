@@ -1,22 +1,19 @@
-using System.Threading.Channels;
 using BenchmarkDotNet.Attributes;
 using BenchmarkDotNet.Configs;
 using BenchmarkDotNet.Jobs;
-using Perfolizer.Horology;
-using Steelax.Toolkit.HighPerformance.Concurrency;
+using Steelax.Toolkit.HighPerformance.Concurrency.Collections;
 
 namespace Steelax.Toolkit.HighPerformance.Benchmarks;
 
 /// <summary>
-/// Benchmarks the SPSC "charge/discharge" <see cref="SpscChannel{T}"/> under the same
-/// producer/consumer pattern as the <c>ConcurrentProducerConsumer_SmallLimit_NoLoss</c> test:
-/// a single producer writes <see cref="N"/> values (spinning while the buffer is full),
-/// a single consumer drains them through <see cref="SpscChannel{T}T}ryRead"/>.
+/// Benchmarks the SPSC "charge/discharge" <see cref="Conduit{T}"/> under the same producer/consumer
+/// pattern as the SPSC concurrency tests: a single producer writes <see cref="N"/> values (spinning
+/// while the buffer is full), a single consumer drains them through <see cref="Conduit{T}.TryRead"/>.
 /// </summary>
 [MemoryDiagnoser]
 [ThreadingDiagnoser]
 [Config(typeof(Config))]
-public partial class SpscQueueBenchmarks
+public partial class ConduitChannelBenchmarks
 {
     /// <summary>
     /// Достоверность замера определяется количеством обработанных элементов (N), поэтому

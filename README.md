@@ -35,7 +35,7 @@ dotnet add package Steelax.Toolkit.HighPerformance
 
 | Type | Namespace | Docs |
 |------|-----------|------|
-| `SpscQueue<T>` / `SpscChannel<T>` / `SpscChannelReader<T>` / `SpscChannelWriter<T>` (+ `Queue*`/`Channel*` role views) | `...Concurrency.Channels` | [📄 SPSC Queues](docs/SpscQueue.md) |
+| `Conduit<T>` | `...Concurrency.Collections` | [📄 Conduit](docs/Conduit.md) |
 | `FanInSlim` | `...Concurrency.Primitives` | [📄 FanInSlim](docs/FanInSlim.md) |
 | `FanInSignalCallback` | `...Concurrency.Primitives` | [📄 FanInSignalCallback](docs/FanInSignalCallback.md) |
 | `BitTaskAny` | `...Concurrency.Primitives` | [📄 BitTaskAny](docs/BitTaskAny.md) |

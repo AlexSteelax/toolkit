@@ -68,10 +68,10 @@ else
 
 ## Notes
 
-- `CompleteSignal` is the readiness core behind the await-based members of [`SpscChannel<T>`](SpscQueue.md), [`SpscChannelReader<T>`](SpscQueue.md) and [`SpscChannelWriter<T>`](SpscQueue.md): `Signal()` on readiness, `Complete()` + `Signal()` on stream completion.
+- `CompleteSignal` is the readiness core behind the await-based members of [`Conduit<T>`](Conduit.md) (`WaitToReadAsync`/`WaitToWriteAsync`, active when the matching `ConduitBehavior` flag created a signal): `Signal()` on readiness, `Complete()` + `Signal()` on stream completion.
 - The `ValueTask<bool>` returned by `WaitAsync` is bound to an internal `IValueTaskSource<bool>` version token; await each returned `ValueTask<bool>` only once.
 
 ## See also
 
-- [`SpscQueue<T>`](SpscQueue.md) — the SPSC queue family that uses `CompleteSignal` for read/write readiness (`WaitToReadAsync`/`WaitToWriteAsync` return `ValueTask<bool>`).
+- [`Conduit<T>`](Conduit.md) — the bounded SPSC transfer that uses `CompleteSignal` for read/write readiness (`WaitToReadAsync`/`WaitToWriteAsync` return `ValueTask<bool>` when awaitable behavior is enabled).
 - [`FanInSlim`](FanInSlim.md) — a fan-in signal with similar wait/reset semantics over up to 32 slots.

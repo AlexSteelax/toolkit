@@ -1,15 +1,14 @@
 ﻿using BenchmarkDotNet.Attributes;
-using Steelax.Toolkit.HighPerformance.Concurrency;
-using Steelax.Toolkit.HighPerformance.Concurrency.Channels;
+using Steelax.Toolkit.HighPerformance.Concurrency.Collections;
 
 namespace Steelax.Toolkit.HighPerformance.Benchmarks;
 
-public partial class SpscQueueBenchmarks
+public partial class ConduitChannelBenchmarks
 {
     [Benchmark(OperationsPerInvoke = Count)]
-    public async Task SpscChannel()
+    public async Task Conduit()
     {
-        var queue = new SpscChannel<int>(Capacity);
+        var queue = new Conduit<int>(Capacity, ConduitBehavior.AwaitableReader | ConduitBehavior.AwaitableWriter);
 
         var producer = Task.Factory.StartNew(async () =>
         {

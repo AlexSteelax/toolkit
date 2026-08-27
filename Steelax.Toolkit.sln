@@ -45,10 +45,12 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "docs", "docs", "{340A2C35-1
 		docs\Deque.md = docs\Deque.md
 		docs\RingCursor.md = docs\RingCursor.md
 		docs\SlotSet.md = docs\SlotSet.md
-		docs\SpscQueue.md = docs\SpscQueue.md
+		docs\Conduit.md = docs\Conduit.md
 		docs\CompleteSignal.md = docs\CompleteSignal.md
 		docs\SegmentedQueue.md = docs\SegmentedQueue.md
 	EndProjectSection
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Steelax.Toolkit.HighPerformance.ConduitDeadlockBenchmark", "benchmarks\Steelax.Toolkit.HighPerformance.ConduitDeadlockBenchmark\Steelax.Toolkit.HighPerformance.ConduitDeadlockBenchmark.csproj", "{52504E7A-334E-4953-BB4B-2BC8BAF75E57}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -108,6 +110,18 @@ Global
 		{7E59D403-A93F-4B2F-871D-40160D9BFE57}.Release|x64.Build.0 = Release|Any CPU
 		{7E59D403-A93F-4B2F-871D-40160D9BFE57}.Release|x86.ActiveCfg = Release|Any CPU
 		{7E59D403-A93F-4B2F-871D-40160D9BFE57}.Release|x86.Build.0 = Release|Any CPU
+		{52504E7A-334E-4953-BB4B-2BC8BAF75E57}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{52504E7A-334E-4953-BB4B-2BC8BAF75E57}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{52504E7A-334E-4953-BB4B-2BC8BAF75E57}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{52504E7A-334E-4953-BB4B-2BC8BAF75E57}.Debug|x64.Build.0 = Debug|Any CPU
+		{52504E7A-334E-4953-BB4B-2BC8BAF75E57}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{52504E7A-334E-4953-BB4B-2BC8BAF75E57}.Debug|x86.Build.0 = Debug|Any CPU
+		{52504E7A-334E-4953-BB4B-2BC8BAF75E57}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{52504E7A-334E-4953-BB4B-2BC8BAF75E57}.Release|Any CPU.Build.0 = Release|Any CPU
+		{52504E7A-334E-4953-BB4B-2BC8BAF75E57}.Release|x64.ActiveCfg = Release|Any CPU
+		{52504E7A-334E-4953-BB4B-2BC8BAF75E57}.Release|x64.Build.0 = Release|Any CPU
+		{52504E7A-334E-4953-BB4B-2BC8BAF75E57}.Release|x86.ActiveCfg = Release|Any CPU
+		{52504E7A-334E-4953-BB4B-2BC8BAF75E57}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -117,6 +131,7 @@ Global
 		{4AD33853-7764-4D1F-910C-E2F28C0305AB} = {19C26739-0DB6-4EFA-A104-71ED74B83473}
 		{B2AF98F0-FF8B-4FA0-8825-8DFDF88340B8} = {8DE90B3E-24A0-443D-95C2-EEA1EFB87C3F}
 		{7E59D403-A93F-4B2F-871D-40160D9BFE57} = {0B078B25-8D2C-4B75-A3B0-EA8411C1A04A}
+		{52504E7A-334E-4953-BB4B-2BC8BAF75E57} = {0B078B25-8D2C-4B75-A3B0-EA8411C1A04A}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {49383F29-3C46-4B19-9899-42E27D25DE4C}

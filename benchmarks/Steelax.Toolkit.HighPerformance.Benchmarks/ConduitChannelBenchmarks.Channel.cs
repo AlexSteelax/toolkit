@@ -1,11 +1,10 @@
 ﻿using System.Threading.Channels;
-using BenchmarkDotNet.Attributes;
 
 namespace Steelax.Toolkit.HighPerformance.Benchmarks;
 
-public partial class SpscQueueBenchmarks
+public partial class ConduitChannelBenchmarks
 {
-    [Benchmark(OperationsPerInvoke = Count)]
+    //[Benchmark(OperationsPerInvoke = Count)]
     public async Task SingleChannel()
     {
         var channel = Channel.CreateBounded<int>(new BoundedChannelOptions(Capacity)
