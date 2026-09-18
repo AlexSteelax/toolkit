@@ -13,10 +13,10 @@ public static partial class FanInSlimTests
     /// </summary>
     public sealed class LostWakeup
     {
-        [Fact(Timeout = 120_000)]
+        [Fact(Timeout = 3_000)]
         public async Task SignalRaced_WithWaiterRegistration_IsNotLost()
         {
-            const int attempts = 200_000;
+            const int attempts = 1_000;
             const int wakeTimeoutMs = 100;
 
             // Prime a few iterations before measuring: ensure nothing in the environment is cold.

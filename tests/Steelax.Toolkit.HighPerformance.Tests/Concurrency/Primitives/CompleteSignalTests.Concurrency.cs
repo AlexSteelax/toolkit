@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using Steelax.Toolkit.HighPerformance.Concurrency.Primitives;
 using Steelax.Toolkit.HighPerformance.Tests.Concurrency.Collections;
 using Xunit.Sdk;
@@ -29,8 +30,6 @@ public static partial class CompleteSignalTests
         public async Task ManySignallers_SingleWaiter_NoSignalIsLost()
         {
             var signal = new CompleteSignal();
-            var probe = new ConduitTests.ProbeTracker(() => ConduitTests.SignalProbe.Dump(signal));
-            // probe.Run();
             
             var sync = new Lock();
 
@@ -87,27 +86,22 @@ public static partial class CompleteSignalTests
                 Assert.Equal(Total, Volatile.Read(ref fired));
                 Assert.True(Volatile.Read(ref consumed) > 1);
             }
-            catch (OperationCanceledException)
-            {
-                probe.Stop();
-                probe.ToOutput(output);
-            }
             finally
             {
-                probe.Stop();
                 output.WriteLine($"{Volatile.Read(ref fired)}:{Volatile.Read(ref consumed)}");
             }
         }
 
-        [Theory]
+        [Theory(Timeout = 3_000)]
         [InlineData(30_000, 1)]
         [InlineData(10_000, 16)]
+        [SuppressMessage("ReSharper", "AccessToModifiedClosure")]
         public async Task PingPong_NoTimeout(int iterations, int writers)
         {
             ArgumentOutOfRangeException.ThrowIfNegativeOrZero(writers);
-            
+
             using var cts = CancellationTokenSource.CreateLinkedTokenSource(TestContext.Current.CancellationToken);
-            cts.CancelAfter(3000);
+            cts.CancelAfter(3_000);
 
             var csReader = new CompleteSignal();
             var csWriter = new CompleteSignal();
@@ -164,7 +158,11 @@ public static partial class CompleteSignalTests
             }
             
             Assert.Equal(iterations, Volatile.Read(ref write));
-            Assert.True(Volatile.Read(ref read) >= iterations);
+
+            if (writers == 1)
+                Assert.True(Volatile.Read(ref read) == iterations);
+            else
+                Assert.True(Volatile.Read(ref read) >= iterations);
         }
     }
 }

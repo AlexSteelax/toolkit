@@ -67,8 +67,6 @@ public static partial class ConduitTests
                 return conduit.TryRead(out _);
             }, TestContext.Current.CancellationToken);
 
-            await Task.Delay(50, TestContext.Current.CancellationToken);
-
             conduit.TryComplete(ex);
 
             var thrown = await Assert.ThrowsAsync<InvalidOperationException>(async () => await consumer);
