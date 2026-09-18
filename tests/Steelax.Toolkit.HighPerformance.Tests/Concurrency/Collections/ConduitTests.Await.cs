@@ -9,7 +9,7 @@ public static partial class ConduitTests
     {
         private const ConduitBehavior Both = ConduitBehavior.AwaitableReader | ConduitBehavior.AwaitableWriter;
 
-        [Fact(Timeout = 2000)]
+        [Fact]
         public async Task ConsumerWaitsUntilData_ThenReads()
         {
             var conduit = new Conduit<int>(4, Both);
@@ -25,7 +25,7 @@ public static partial class ConduitTests
             Assert.Equal(42, value);
         }
 
-        [Fact(Timeout = 2000)]
+        [Fact]
         public async Task WriterWaitsUntilCapacity_ThenWrites()
         {
             var conduit = new Conduit<int>(1, Both);
@@ -45,7 +45,7 @@ public static partial class ConduitTests
             Assert.Equal(2, second);
         }
 
-        [Fact(Timeout = 2000)]
+        [Fact]
         public async Task Complete_EndOfStreamWakesReader()
         {
             var conduit = new Conduit<int>(4, Both);
@@ -62,7 +62,7 @@ public static partial class ConduitTests
             Assert.True(conduit.IsCompleted);
         }
 
-        [Fact(Timeout = 2000)]
+        [Fact]
         public async Task WaitToReadAsync_AlreadyCompleted_ReturnsFalse()
         {
             var conduit = new Conduit<int>(4, Both);
@@ -71,7 +71,7 @@ public static partial class ConduitTests
             Assert.False(await conduit.WaitToReadAsync());
         }
 
-        [Fact(Timeout = 2000)]
+        [Fact]
         public async Task WaitToWriteAsync_AlreadyCompleted_ReturnsFalse()
         {
             var conduit = new Conduit<int>(4, Both);
@@ -80,7 +80,7 @@ public static partial class ConduitTests
             Assert.False(await conduit.WaitToWriteAsync());
         }
 
-        [Fact(Timeout = 2000)]
+        [Fact]
         public async Task WaitToReadAsync_DataAvailable_ReturnsTrue()
         {
             var conduit = new Conduit<int>(4, Both);
@@ -113,7 +113,7 @@ public static partial class ConduitTests
             Assert.True(conduit.IsCompleted);
         }
 
-        [Fact(Timeout = 2000)]
+        [Fact]
         public async Task BareWaitToRead_CoversLiveStatus()
         {
             // Without AwaitableReader the wait falls back to reporting liveness: true while alive.

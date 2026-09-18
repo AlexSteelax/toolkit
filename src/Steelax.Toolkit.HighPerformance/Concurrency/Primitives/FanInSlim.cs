@@ -17,18 +17,26 @@ namespace Steelax.Toolkit.HighPerformance.Concurrency.Primitives;
 /// The consumer is responsible for managing source lifecycle and re-registration.
 /// </para>
 /// <para>
-/// The readiness core is driven by a lock-free state machine (<c>0</c> = idle, <c>1</c> = waiting,
-/// <c>2</c> = signaled) with CAS transitions. <c>SetResult</c> is invoked outside any lock, so
-/// synchronous continuations may safely re-enter <see cref="WaitAsync"/> without a deadlock.
+/// The readiness core follows the same single-word CAS model as <see cref="CompleteSignal"/>: a
+/// <c>_handshake</c> packs the handshake bits (currently only <c>Waiting</c>, since the source of
+/// readiness is the <c>_readyMask</c> itself), and every transition is a bounded CAS loop. The
+/// empty → non-empty transition of the mask (reported by the previous value returned by
+/// <see cref="Interlocked.Or(ref uint, uint)"/> on the ready mask) acts as the readiness edge: either
+/// it claims a registered wait and completes it exactly once, or it leaves the non-empty mask for the
+/// next fast-path. <c>SetResult</c> is invoked outside any lock, so synchronous continuations may
+/// safely re-enter <see cref="WaitAsync"/> without a deadlock.
 /// </para>
 /// </remarks>
 [PublicAPI]
 public sealed class FanInSlim(bool allowSynchronousContinuations = true) : IValueTaskSource
 {
+    private const int Waiting = 0x1;
+
+    // Readiness mask: the source of truth (non-empty ⟺ at least one event to consume).
     private uint _readyMask;
 
-    // 0 = Idle, 1 = Waiting, 2 = Signaled
-    private int _state;
+    // Handshake bits: Waiting = a waiter is registered on the current core version.
+    private int _handshake;
 
     private ManualResetValueTaskSourceCore<object?> _core = new()
     {
@@ -48,35 +56,34 @@ public sealed class FanInSlim(bool allowSynchronousContinuations = true) : IValu
     [PublicAPI]
     public ValueTask WaitAsync()
     {
+        // Fast path: a ready slot is already pending — no registration needed.
         if (Volatile.Read(ref _readyMask) != 0)
             return ValueTask.CompletedTask;
 
         while (true)
         {
-            switch (Volatile.Read(ref _state))
+            // Re-arm the core to a fresh version only when we are about to register.
+            _core.Reset();
+
+            // A slot fired while we were re-arming: report it synchronously — the mask stays visible
+            // for the caller's Take. We do not touch the core here; a Reset-per-round is harmless and
+            // the next registration re-arms a fresh version.
+            if (Volatile.Read(ref _readyMask) != 0)
+                return ValueTask.CompletedTask;
+
+            // Register as the waiter. Only one thread can win the Waiting bit, so exactly one
+            // registration owns one core version.
+            if (Interlocked.CompareExchange(ref _handshake, Waiting, 0) == 0)
             {
-                // A signal is raised but no ready slots remain (they were taken): clear the stale
-                // signal (2 → 0) and fall through to register a fresh wait. A signal raised in the
-                // meantime is not lost — the loop re-reads _state.
-                case 2:
-                    Interlocked.CompareExchange(ref _state, 0, 2);
-                    continue;
-
-                // Idle: rearm the core to a fresh version and register this wait. Only the thread that
-                // transitions 0 → 1 wins the right to register; a concurrent signal (0 → 2 / 1 → 2)
-                // cannot be lost.
-                case 0:
-                    _core.Reset();
-
-                    if (Interlocked.CompareExchange(ref _state, 1, 0) == 0)
-                        return new ValueTask(this, _core.Version);
-
-                    continue;
-
-                // case 1: a wait is already registered (a duplicate WaitAsync call). There is nothing
-                // to (re)arm — the existing registration will be signaled by a producer.
-                default:
+                // A first slot may have fired between the mask check above and the registration, after
+                // the signaler already read the handshake without a waiter. Re-check the mask and, if
+                // non-empty, release the wait and report it synchronously instead of parking.
+                if (Volatile.Read(ref _readyMask) != 0 && Interlocked.CompareExchange(ref _handshake, 0, Waiting) == Waiting)
                     return ValueTask.CompletedTask;
+
+                // Either the mask is still empty (we wait for a future Signal), or the signaler already
+                // claimed the Waiting bit and will deliver SetResult for this fresh core.
+                return new ValueTask(this, _core.Version);
             }
         }
     }
@@ -94,7 +101,7 @@ public sealed class FanInSlim(bool allowSynchronousContinuations = true) : IValu
             return new SlotSet();
 
         // Only clear the bits being returned; concurrent completions are preserved.
-        Interlocked.And(ref _readyMask, ~ready);
+        _ = Interlocked.And(ref _readyMask, ~ready);
 
         return new SlotSet(ready);
     }
@@ -129,28 +136,22 @@ public sealed class FanInSlim(bool allowSynchronousContinuations = true) : IValu
         ArgumentOutOfRangeException.ThrowIfNegative(index);
         ArgumentOutOfRangeException.ThrowIfGreaterThanOrEqual(index, sizeof(int) * 8);
 
-        _ = Interlocked.Or(ref _readyMask, 1u << index);
+        // Publish the event unconditionally: the mask is the source of truth, so the event is never
+        // lost regardless of who is listening.
+        var previous = Interlocked.Or(ref _readyMask, 1u << index);
 
-        var current = Volatile.Read(ref _state);
-
-        // Already signaled — nothing to do.
-        if (current == 2)
+        // Only the empty → non-empty transition of the mask acts as the readiness edge (like the
+        // Ready bit in CompleteSignal). Further signals while the mask is already non-empty have
+        // already been (or will be) observed by the active waiter.
+        if (previous != 0)
             return;
 
-        // Idle → Signaled without SetResult: no waiter is registered, so the charge is merely a
-        // "signal is raised" flag. The consumer observes 2 in WaitAsync and returns immediately.
-        if (current == 0)
+        // The mask just became non-empty: if a waiter is registered, claim the Waiting bit and
+        // deliver exactly one wake. Otherwise the non-empty mask is observed by the next fast path.
+        if ((Volatile.Read(ref _handshake) & Waiting) != 0
+            && Interlocked.CompareExchange(ref _handshake, 0, Waiting) == Waiting)
         {
-            if (Interlocked.CompareExchange(ref _state, 2, 0) != 0)
-                current = Volatile.Read(ref _state);
-        }
-
-        // Waiting → Signaled: wake the registered waiter. SetResult is invoked outside any lock, so a
-        // synchronous continuation may safely re-enter WaitAsync.
-        if (current == 1)
-        {
-            if (Interlocked.CompareExchange(ref _state, 2, 1) == 1)
-                _core.SetResult(null);
+            _core.SetResult(null);
         }
     }
 

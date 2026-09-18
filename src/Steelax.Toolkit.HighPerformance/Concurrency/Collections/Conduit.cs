@@ -23,12 +23,14 @@ public partial class Conduit<T>
     // Writer's cache line: written by the writer on the hot path; read by the reader and the watchdog.
     private CacheLinePad _padWriter;
     internal uint WriterSeq;
+    internal int WriterMiss;
     private int _version;
 
     // Reader's cache line: written by the reader on the hot path; read by the writer. _closed is
     // written by the writer only at completion, so it causes no steady-state cache-line ping-pong.
     private CacheLinePad _padReader;
     internal uint ReaderSeq;
+    internal int ReaderMiss;
     private bool _closed;
     
     /// <summary>
@@ -112,9 +114,9 @@ public partial class Conduit<T>
         _writerSignal?.Signal();
     }
 
-    private void Close()
-    {
-        _writerSignal?.Complete();
-        _readerSignal?.Complete();
-    }
+    // private void Close()
+    // {
+    //     _writerSignal?.Complete();
+    //     _readerSignal?.Complete();
+    // }
 }

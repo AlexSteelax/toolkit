@@ -8,31 +8,49 @@ public static partial class ConduitTests
     /// <summary>Load tests exercising the core and readiness signals under contention.</summary>
     public sealed class Concurrency(ITestOutputHelper output)
     {
-        [Fact(Timeout = 10000)]
+        [Fact]
         public async Task ConcurrentProducerConsumer_InputMatchesOutput()
         {
             const int count = 30_000;
             const int capacity = 512;
-
+            using var cts = CancellationTokenSource.CreateLinkedTokenSource(TestContext.Current.CancellationToken);
+            
+            cts.CancelAfter(3000);
+            
             var watch = Stopwatch.StartNew();
             var conduit = new Conduit<int>(capacity, ConduitBehavior.AwaitableReader | ConduitBehavior.AwaitableWriter);
+            // var probe = new ProbeTracker(() => ChannelProbe<int>.Dump(conduit));
+            // probe.Run();
 
-            var producer = WriteSequence(conduit, Enumerable.Range(0, count), fallback: false, TestContext.Current.CancellationToken);
-            var consumer = ReadAllAsync(conduit);
+            var producerState = new SequenceState();
+            var consumerState = new SequenceState();
+            var producer = WriteSequence(conduit, Enumerable.Range(0, count), fallback: false, cts.Token, producerState);
+            var consumer = ReadAllAsync(conduit, consumerState);
 
             try
             {
-                var collected = await consumer;
-
-                await producer.WaitAsync(TimeSpan.FromSeconds(5), TestContext.Current.CancellationToken);
+                await producer.WaitAsync(cts.Token);
+                
+                var collected = await consumer.WaitAsync(cts.Token);;
 
                 Assert.Equal(count, collected.Count);
                 Assert.Equal(Enumerable.Range(0, count), collected);
             }
+            catch (OperationCanceledException)
+            {
+                // probe.Stop();
+                
+                Assert.Fail("OperationCanceledException");
+            }
             finally
             {
                 watch.Stop();
+                // probe.Stop();
+                
+                output.WriteLine($"Conduit count={conduit.Count} full={conduit.IsFull} completed={conduit.IsCompleted}");
+                output.WriteLine($"Producer c={producerState.Count} | Consumer c={consumerState.Count}");
 
+                // probe.ToOutput(output);
                 output.WriteLine(watch.ElapsedMilliseconds is var elapsed && elapsed != 0 ? $"Time elapsed: {1m * count / elapsed:F3} item/ms" : "Time elapsed: - item/ms");
             }
         }

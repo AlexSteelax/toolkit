@@ -15,7 +15,10 @@ public partial class ConduitChannelBenchmarks
             for (var i = 0; i < Count; i++)
             {
                 while (!queue.TryWrite(i))
-                    await queue.WaitToWriteAsync();
+                {
+                    if (!await queue.WaitToWriteAsync())
+                        break;
+                }
             }
 
             queue.TryComplete();

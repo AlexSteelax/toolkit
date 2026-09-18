@@ -1,3 +1,4 @@
+using JetBrains.Annotations;
 using Steelax.Toolkit.HighPerformance.Concurrency.Collections;
 using Steelax.Toolkit.HighPerformance.Concurrency.Primitives;
 
@@ -8,10 +9,22 @@ namespace Steelax.Toolkit.HighPerformance.Tests.Concurrency.Collections;
 /// </summary>
 public static partial class ConduitTests
 {
-
-    private static async Task WriteSequence<T>(Conduit<T> conduit, IEnumerable<T> sequence, bool fallback, CancellationToken cancellationToken)
+    private sealed class SequenceState
     {
-        await using var ctr = cancellationToken.Register(() => conduit.TryTerminate(new OperationCanceledException(cancellationToken)));
+        [PublicAPI]
+        public long Count
+        {
+            get => Volatile.Read(ref field);
+            set => Volatile.Write(ref field, value);
+        }
+
+        public void Increment() => Count++;
+    }
+    
+    private static async Task WriteSequence<T>(Conduit<T> conduit, IEnumerable<T> sequence, bool fallback, CancellationToken cancellationToken, SequenceState? state = null)
+    {
+        // await using var ctr = cancellationToken.Register(() => conduit.TryTerminate(new OperationCanceledException(cancellationToken)));
+        state ??= new SequenceState();
         
         await Task.Run(async () =>
         {
@@ -38,6 +51,8 @@ public static partial class ConduitTests
                                 break;
                         }
                     }
+                    
+                    state.Increment();
                 }
             }
             catch (Exception ex)
@@ -52,15 +67,17 @@ public static partial class ConduitTests
     }
     
     /// <summary>Drains the conduit via a busy loop until the stream completes.</summary>
-    private static List<int> ReadAll(Conduit<int> conduit)
+    private static List<int> ReadAll(Conduit<int> conduit, SequenceState? state = null)
     {
         var result = new List<int>();
+        state ??= new SequenceState();
 
         while (true)
         {
             if (conduit.TryRead(out var value))
             {
                 result.Add(value);
+                state.Increment();
                 continue;
             }
 
@@ -72,15 +89,17 @@ public static partial class ConduitTests
     }
 
     /// <summary>Drains the conduit via the await API until the stream completes.</summary>
-    private static async Task<List<int>> ReadAllAsync(Conduit<int> conduit)
+    private static async Task<List<int>> ReadAllAsync(Conduit<int> conduit, SequenceState? state = null)
     {
         var result = new List<int>();
-
+        state ??= new SequenceState();
+        
         while (true)
         {
             if (conduit.TryRead(out var value))
             {
                 result.Add(value);
+                state.Increment();
                 continue;
             }
 

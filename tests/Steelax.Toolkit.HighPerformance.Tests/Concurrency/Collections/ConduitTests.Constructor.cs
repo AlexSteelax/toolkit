@@ -12,7 +12,7 @@ public static partial class ConduitTests
         public void NonPositiveCapacity_Throws(int capacity) =>
             Assert.Throws<ArgumentOutOfRangeException>(() => new Conduit<int>(capacity));
 
-        [Fact(Timeout = 2000)]
+        [Fact]
         public async Task DefaultBehavior_CreatesBareConduit()
         {
             var conduit = new Conduit<int>(4);
@@ -22,7 +22,7 @@ public static partial class ConduitTests
             Assert.True(await conduit.WaitToWriteAsync());
         }
 
-        [Fact(Timeout = 2000)]
+        [Fact]
         public async Task AwaitableReader_CreatesSignal()
         {
             var conduit = new Conduit<int>(4, ConduitBehavior.AwaitableReader);

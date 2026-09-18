@@ -72,9 +72,10 @@ public partial class Conduit<T>
         Volatile.Write(ref _closed, true);
         Volatile.Write(ref _completed, true);
         
-        Close();
-        WakeUpReader();
+        _writerSignal?.Complete();
+        _readerSignal?.Complete();
         WakeUpWriter();
+        WakeUpReader();
         
         return true;
     }

@@ -1,10 +1,11 @@
 ﻿using System.Threading.Channels;
+using BenchmarkDotNet.Attributes;
 
 namespace Steelax.Toolkit.HighPerformance.Benchmarks;
 
 public partial class ConduitChannelBenchmarks
 {
-    //[Benchmark(OperationsPerInvoke = Count)]
+    [Benchmark(OperationsPerInvoke = Count)]
     public async Task SingleChannel()
     {
         var channel = Channel.CreateBounded<int>(new BoundedChannelOptions(Capacity)
@@ -22,7 +23,10 @@ public partial class ConduitChannelBenchmarks
             for (var i = 0; i < Count; i++)
             {
                 while (!writer.TryWrite(i))
-                    await writer.WaitToWriteAsync();
+                {
+                    if (!await writer.WaitToWriteAsync())
+                        break;
+                }
             }
 
             writer.Complete();

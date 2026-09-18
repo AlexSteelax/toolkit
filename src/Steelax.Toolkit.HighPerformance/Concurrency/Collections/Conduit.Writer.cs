@@ -46,7 +46,10 @@ public partial class Conduit<T>
         var count = WriterSeq - Volatile.Read(ref ReaderSeq);
 
         if (count == Capacity)
+        {
+            _ = Interlocked.CompareExchange(ref WriterMiss, 1, 0);
             return false;
+        }
 
         // Write the item into the ring slot and publish it (release) before signalling: the release
         // write guarantees that a reader, seeing the new WriterSeq via Volatile.Read, also sees the item.
@@ -55,11 +58,8 @@ public partial class Conduit<T>
         Volatile.Write(ref WriterSeq, unchecked(WriterSeq + 1));
         _version++;
 
-        if (count == 0)
+        if (Interlocked.CompareExchange(ref ReaderMiss, 0, 1) == 1 || count == 0)
             WakeUpReader();
-
-        if (count + 1 == Capacity)
-            _ = _writerSignal?.TryReset();
 
         return true;
     }
@@ -82,7 +82,7 @@ public partial class Conduit<T>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public bool TryComplete(Exception? ex = null)
     {
-        if (_closed)
+        if (Volatile.Read(ref _closed))
             return false;
 
         if (ex is not null)
@@ -95,9 +95,10 @@ public partial class Conduit<T>
         if (WriterSeq - Volatile.Read(ref ReaderSeq) == 0)
         {
             Volatile.Write(ref _completed, true);
-            Close();
+            _readerSignal?.Complete();
         }
 
+        _writerSignal?.Complete();
         WakeUpReader();
 
         return true;
@@ -128,28 +129,20 @@ public partial class Conduit<T>
         if (_writerSignal is null)
             return ValueTask.FromResult(!Volatile.Read(ref _completed));
         
-        while (true)
-        {
-            // The stream is over — no need to wait.
-            if (IsCompleted)
-                return ValueTask.FromResult(false);
+        // The stream is over — no need to wait.
+        if (IsCompleted)
+            return ValueTask.FromResult(false);
 
-            // Room is already available — no need to wait.
-            if (WriterSeq - Volatile.Read(ref ReaderSeq) < Capacity)
-                return ValueTask.FromResult(true);
+        // Room is already available — no need to wait.
+        if (WriterSeq - Volatile.Read(ref ReaderSeq) < Capacity)
+            return ValueTask.FromResult(true);
 
-            // A signal is raised but no room is available yet (it was consumed earlier): clear the
-            // stale signal and re-check, so a signal raised between the check and the reset is not lost.
-            if (_writerSignal.TryReset())
-                continue;
-
-            // No signal raised: register a wait. The signal resolves to true (capacity freed) or false
-            // (stream completed); a concurrently raised signal completes WaitAsync synchronously and the
-            // loop re-checks the queue.
-            return _writerSignal.WaitAsync();
-        }
+        // No signal raised: register a wait. The signal resolves to true (capacity freed) or false
+        // (stream completed); a concurrently raised signal completes WaitAsync synchronously and the
+        // loop re-checks the queue.
+        return _writerSignal.WaitAsync();
     }
-        
+    
     [DoesNotReturn]
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private void ThrowClosedException()

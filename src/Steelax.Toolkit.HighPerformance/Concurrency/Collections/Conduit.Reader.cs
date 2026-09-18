@@ -30,6 +30,7 @@ public partial class Conduit<T>
         if (CompleteOrThrowClosedException(count == 0))
         {
             value = default!;
+            _ = Interlocked.CompareExchange(ref ReaderMiss, 1, 0);
             return false;
         }
 
@@ -46,12 +47,9 @@ public partial class Conduit<T>
         // so it must advance the liveness counter (the writer is done).
         if (Volatile.Read(ref _closed))
             Interlocked.Increment(ref _version);
-
-        if (count == Capacity)
+        
+        if (Interlocked.CompareExchange(ref WriterMiss, 0, 1) == 1 || count == Capacity)
             WakeUpWriter();
-
-        if (count == 1)
-            _ = _readerSignal?.TryReset();
 
         return true;
     }
@@ -78,6 +76,7 @@ public partial class Conduit<T>
         if (CompleteOrThrowClosedException(count == 0))
         {
             value = default!;
+            _ = Interlocked.CompareExchange(ref ReaderMiss, 1, 0);
             return false;
         }
 
@@ -90,35 +89,21 @@ public partial class Conduit<T>
     private bool CompleteOrThrowClosedException(bool maybeCompleted)
     {
         var completed = Volatile.Read(ref _completed);
-        
+
+        if (!completed && Volatile.Read(ref _closed) && maybeCompleted)
+        {
+            Volatile.Write(ref _completed, true);
+            completed = true;
+        }
+
         if (completed)
         {
+            _readerSignal?.Complete();
+            
             if (Volatile.Read(ref _error) is { } error)
                 error.Throw();
 
             return true;
-        }
-        
-        // The buffer is empty. If the stream is closed, latch the terminal state so IsCompleted
-        // becomes observable (Complete may have been called while items were still buffered), then
-        // surface the completion exception if one was captured.
-        if (!maybeCompleted)
-            return maybeCompleted;
-        
-        {
-            // Mirror the terminal latch of TryRead so the completion exception surfaces to the reader
-            // and IsCompleted becomes observable.
-            if (!Volatile.Read(ref _closed))
-                return maybeCompleted;
-            
-            if (Volatile.Read(ref _error) is { } error)
-                error.Throw();
-
-            if (completed)
-                return maybeCompleted;
-            
-            Volatile.Write(ref _completed, true);
-            Close();
         }
 
         return maybeCompleted;
@@ -150,25 +135,17 @@ public partial class Conduit<T>
         if (_readerSignal is null)
             return ValueTask.FromResult(!Volatile.Read(ref _completed));
         
-        while (true)
-        {
-            // The stream is over — no need to wait.
-            if (IsCompleted)
-                return ValueTask.FromResult(false);
+        // The stream is over — no need to wait.
+        if (IsCompleted)
+            return ValueTask.FromResult(false);
             
-            // Data already published — no need to wait.
-            if (Volatile.Read(ref WriterSeq) != ReaderSeq)
-                return ValueTask.FromResult(true);
+        // Data already published — no need to wait.
+        if (Volatile.Read(ref WriterSeq) != ReaderSeq)
+            return ValueTask.FromResult(true);
 
-            // A signal is raised but no data is available yet (it was consumed earlier): clear the
-            // stale signal and re-check, so a signal raised between the check and the reset is not lost.
-            if (_readerSignal.TryReset())
-                continue;
-
-            // No signal raised: register a wait. The signal resolves to true (data arrived) or false
-            // (stream completed); a concurrently raised signal completes WaitAsync synchronously and the
-            // loop re-checks the queue.
-            return _readerSignal.WaitAsync();
-        }
+        // No signal raised: register a wait. The signal resolves to true (data arrived) or false
+        // (stream completed); a concurrently raised signal completes WaitAsync synchronously and the
+        // loop re-checks the queue.
+        return _readerSignal.WaitAsync();
     }
 }

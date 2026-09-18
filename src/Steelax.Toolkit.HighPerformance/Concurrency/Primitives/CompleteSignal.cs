@@ -10,21 +10,38 @@ namespace Steelax.Toolkit.HighPerformance.Concurrency.Primitives;
 /// </summary>
 /// <remarks>
 /// <para>
-/// Readiness is a latch over a three-state machine: <c>0 = Idle, 1 = Waiting, 2 = Ready</c>.
-/// <see cref="Signal"/> marks readiness (a reusable edge-triggered state), while <see cref="Complete"/>
-/// latches a terminal completion flag that is never cleared by <see cref="TryReset"/> and makes every
-/// subsequent <see cref="WaitAsync"/> return <see langword="false"/>.
+/// A single <c>int</c> packs the entire handshake state, so no lock is needed — every operation is a
+/// bounded CAS loop:
+/// <list type="bullet">
+/// <item><c>0x1 (Ready)</c> — a readiness event is pending (edge-triggered). Raised by
+/// <see cref="Signal"/> when no waiter is registered; consumed by <see cref="TryReset"/> and by the
+/// waiter's fast path.</item>
+/// <item><c>0x2 (Wait)</c> — a waiter is registered on the current version of
+/// <see cref="ManualResetValueTaskSourceCore{TResult}"/>. Raised by <see cref="WaitAsync"/>; claimed by
+/// <see cref="Signal"/> to deliver exactly one wake.</item>
+/// </list>
+/// Delivery is single-channel: a signal either claims the <c>Wait</c> bit and calls
+/// <c>SetResult</c>, or raises the <c>Ready</c> bit for a future fast path. Both can never be held at
+/// once by the same event, so neither double-delivery nor lost-wakeup can occur.
 /// </para>
 /// <para>
-/// A stale readiness signal (raised while no work is actually available) is cleared on <see cref="TryReset"/>
-/// and a fresh wait is re-registered, so a signal raised between a failed check and a reset is never lost.
+/// <see cref="ManualResetValueTaskSourceCore{TResult}.SetResult"/> is always invoked outside the CAS
+/// loop: a synchronous continuation (<c>allowSynchronousContinuations</c>) may re-enter
+/// <see cref="WaitAsync"/> on the same thread.
+/// </para>
+/// <para>
+/// <see cref="Complete"/> latches the terminal completion flag, making every subsequent
+/// <see cref="WaitAsync"/> return <see langword="false"/>, and wakes a registered waiter immediately.
 /// </para>
 /// </remarks>
 [PublicAPI]
 public sealed class CompleteSignal(bool allowSynchronousContinuations = true) : IValueTaskSource, IValueTaskSource<bool>
 {
-    // 0 = Idle, 1 = Waiting, 2 = Signaled
-    private int _state;
+    private const int Ready = 0x1;
+    private const int Wait = 0x2;
+
+    // Packed handshake state: 0 = idle, Ready = event pending, Wait = waiter registered.
+    private int _handshake;
 
     // Terminal completion latch: set once by Complete(), never cleared, read via Volatile.
     private bool _completed;
@@ -42,9 +59,10 @@ public sealed class CompleteSignal(bool allowSynchronousContinuations = true) : 
     /// signalled, or <see langword="false"/> when the signal was completed (terminal).
     /// </returns>
     /// <remarks>
-    /// Completes synchronously when a signal is already pending, without consuming it — consumption is
-    /// done separately via <see cref="TryReset"/>. Await each returned <see cref="ValueTask{TResult}"/>
-    /// only once. A completed (terminal) signal always yields <see langword="false"/>.
+    /// Completes synchronously when a readiness event is already pending, without consuming it —
+    /// consumption is done separately via <see cref="TryReset"/>. Await each returned
+    /// <see cref="ValueTask{TResult}"/> only once. A completed (terminal) signal always yields
+    /// <see langword="false"/>.
     /// </remarks>
     [PublicAPI]
     public ValueTask<bool> WaitAsync()
@@ -53,32 +71,31 @@ public sealed class CompleteSignal(bool allowSynchronousContinuations = true) : 
         if (Volatile.Read(ref _completed))
             return ValueTask.FromResult(false);
 
+        // Fast path: a readiness event is already pending. Consume it synchronously without touching
+        // the core, entirely outside any CAS loop.
         while (true)
         {
-            switch (Volatile.Read(ref _state))
+            var state = Volatile.Read(ref _handshake);
+
+            // A readiness event is pending: consume it synchronously and report it, without touching
+            // the core. This is the same semantic path both on entry and when a signal lands while we
+            // are re-arming — no need for a "virtual" pending task.
+            if ((state & Ready) != 0)
             {
-                // A readiness signal is raised: complete synchronously with true, without consuming it.
-                // Consumption is the caller's responsibility (via TryReset), so a raised signal is never
-                // silently lost.
-                case 2:
-                    return ValueTask.FromResult(!_completed);
-
-                // Idle: rearm the core to a fresh version and register this wait. Only the thread that
-                // transitions 0 → 1 wins the right to register; a concurrent signal (0 → 2, 1 → 2) or
-                // completion cannot be lost.
-                case 0:
-                    _core.Reset();
-
-                    if (Interlocked.CompareExchange(ref _state, 1, 0) == 0)
-                        return new ValueTask<bool>(this, _core.Version);
-
+                if (Interlocked.CompareExchange(ref _handshake, state & ~Ready, state) != state)
                     continue;
 
-                // case 1: a wait is already registered (a duplicate WaitAsync call). There is nothing
-                // to (re)arm — the existing registration will be signaled by a producer.
-                default:
-                    return ValueTask.FromResult(!_completed);
+                return ValueTask.FromResult(!Volatile.Read(ref _completed));
             }
+
+            // Register as the waiter. Re-arm the core to a fresh version just before claiming the
+            // Wait bit: only this thread owns the core, so there is no competing Reset. A Signal that
+            // lands between the state read and this CAS either loses the CAS (we regain the loop and
+            // observe Ready) or, if the Wait bit wins, claims the Wait bit and delivers SetResult.
+            _core.Reset();
+
+            if (Interlocked.CompareExchange(ref _handshake, state | Wait, state) == state)
+                return new ValueTask<bool>(this, _core.Version);
         }
     }
 
@@ -94,53 +111,66 @@ public sealed class CompleteSignal(bool allowSynchronousContinuations = true) : 
     [PublicAPI]
     public bool TryReset()
     {
-        while (Volatile.Read(ref _state) == 2)
+        while (true)
         {
-            if (Interlocked.CompareExchange(ref _state, 0, 2) == 2)
+            var state = Volatile.Read(ref _handshake);
+
+            if ((state & Ready) == 0)
+                return false;
+
+            if (Interlocked.CompareExchange(ref _handshake, state & ~Ready, state) == state)
                 return true;
         }
-
-        return false;
     }
 
     /// <summary>Raises readiness, waking an awaiting consumer if one is registered.</summary>
+    /// <remarks>May be called from many threads. The wake (SetResult) is delivered after the CAS claim,
+    /// so a synchronous continuation can safely re-enter <see cref="WaitAsync"/>.</remarks>
     [PublicAPI]
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void Signal()
     {
-        var current = Volatile.Read(ref _state);
-
-        // Already ready — nothing to do.
-        if (current == 2)
-            return;
-
-        // Idle → Ready without SetResult: no waiter is registered, so the charge is merely a "ready"
-        // flag. The consumer observes 2 in WaitAsync/TryReset and returns immediately.
-        if (current == 0)
+        while (true)
         {
-            if (Interlocked.CompareExchange(ref _state, 2, 0) != 0)
-                current = Volatile.Read(ref _state);
-        }
+            var state = Volatile.Read(ref _handshake);
 
-        // Waiting → Ready: wake the registered waiter. SetResult is invoked outside any lock, so a
-        // synchronous continuation may safely re-enter WaitAsync.
-        if (current == 1)
-        {
-            if (Interlocked.CompareExchange(ref _state, 2, 1) == 1)
-                _core.SetResult(!_completed);
+            // A waiter is registered: claim the Wait bit and deliver exactly one wake. Only one
+            // signaler can win this CAS, so one registration is completed at most once.
+            if ((state & Wait) != 0)
+            {
+                if (Interlocked.CompareExchange(ref _handshake, state & ~Wait, state) == state)
+                    _core.SetResult(!Volatile.Read(ref _completed));
+                return;
+            }
+
+            // No waiter: raise the readiness flag (if not already raised), to be consumed by the next
+            // WaitAsync fast path or TryReset.
+            if ((state & Ready) != 0)
+                return;
+
+            if (Interlocked.CompareExchange(ref _handshake, state | Ready, state) == state)
+                return;
         }
     }
 
     /// <summary>
     /// Latches the terminal completion flag, making every subsequent <see cref="WaitAsync"/> return
-    /// <see langword="false"/>. Does not wake a waiter by itself — combine with <see cref="Signal"/>
-    /// (or rely on the consumer re-checking) to complete a registered wait.
+    /// <see langword="false"/>. Wakes a waiter that is already registered (via the single-channel
+    /// delivery of <see cref="Signal"/>, which completes with <see langword="false"/> since the flag
+    /// is set).
     /// </summary>
     [PublicAPI]
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void Complete()
     {
+        if (Volatile.Read(ref _completed))
+            return;
+
         Volatile.Write(ref _completed, true);
+
+        // Wake a parked waiter immediately: Signal routes through a single delivery channel — if a
+        // waiter is registered it is completed with false; otherwise the flag is raised and the next
+        // WaitAsync returns false directly. Without this, a consumer that re-registered a pending wait
+        // just before completion would sleep forever (no further Signal ever arrives).
+        Signal();
     }
 
     /// <summary>Gets the status of the awaited operation.</summary>

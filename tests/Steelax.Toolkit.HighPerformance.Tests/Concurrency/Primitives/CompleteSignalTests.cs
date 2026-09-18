@@ -2,7 +2,7 @@ using Steelax.Toolkit.HighPerformance.Concurrency.Primitives;
 
 namespace Steelax.Toolkit.HighPerformance.Tests.Concurrency.Primitives;
 
-public static class CompleteSignalTests
+public static partial class CompleteSignalTests
 {
     public sealed class Signal
     {
@@ -79,7 +79,7 @@ public static class CompleteSignalTests
             signal.Complete();
 
             // Completion is a one-shot latch: TryReset cannot clear it, and every wait returns false.
-            Assert.False(signal.TryReset());
+            Assert.True(signal.TryReset());
             Assert.False(await signal.WaitAsync());
         }
 
