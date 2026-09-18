@@ -54,10 +54,10 @@ jobs:
           configFilePath: GitVersion.yml
 
       - name: Restore
-        run: dotnet restore
+        run: dotnet restore --verbosity Minimal
 
       - name: Build
-        run: dotnet build --configuration ${{ env.CONFIGURATION }} --no-restore
+        run: dotnet build --configuration ${{ env.CONFIGURATION }} --no-restore --verbosity Minimal
 
       #- name: Verify formatting
       #  run: dotnet format --verify-no-changes --no-restore
@@ -76,10 +76,10 @@ jobs:
           dotnet-version: ${{ env.DOTNET_VERSION }}
 
       - name: Restore
-        run: dotnet restore
+        run: dotnet restore --verbosity Minimal
 
       - name: Test
-        run: dotnet test --configuration ${{ env.CONFIGURATION }} --no-restore --verbosity normal
+        run: dotnet test --configuration ${{ env.CONFIGURATION }} --no-restore --verbosity Minimal
 
   # Slim publish: build + pack + push for preview tags (vX.Y.Z-preview.N).
   # Tests for this commit have already been run by CI on main.
@@ -111,13 +111,13 @@ jobs:
           echo "Resolved preview version: $VER"
 
       - name: Restore
-        run: dotnet restore
+        run: dotnet restore --verbosity Minimal
 
       - name: Build
-        run: dotnet build --configuration ${{ env.CONFIGURATION }} --no-restore
+        run: dotnet build --configuration ${{ env.CONFIGURATION }} --no-restore --verbosity Minimal
 
       - name: Pack
-        run: dotnet pack --configuration ${{ env.CONFIGURATION }} --no-build --no-restore /p:Version=${{ steps.version.outputs.version }} --output artifacts
+        run: dotnet pack --configuration ${{ env.CONFIGURATION }} --no-build --no-restore /p:Version=${{ steps.version.outputs.version }} --output artifacts --verbosity Minimal
 
       # Get a short-lived NuGet API key
       - name: NuGet login (OIDC → temp API key)
@@ -127,7 +127,7 @@ jobs:
           user: ${{ secrets.NUGET_USER }}
 
       - name: Publish to NuGet
-        run: dotnet nuget push "artifacts/*.nupkg" --skip-duplicate --api-key ${{ steps.login.outputs.NUGET_API_KEY }} --source https://api.nuget.org/v3/index.json
+        run: dotnet nuget push "artifacts/*.nupkg" --skip-duplicate --api-key ${{ steps.login.outputs.NUGET_API_KEY }} --source https://api.nuget.org/v3/index.json --verbosity Minimal
 
   # Slim publish: build + pack + push for stable tags (vX.Y.Z).
   # Tests for this commit have already been run by CI on main.
@@ -162,11 +162,11 @@ jobs:
         run: dotnet restore
 
       - name: Build
-        run: dotnet build --configuration ${{ env.CONFIGURATION }} --no-restore
+        run: dotnet build --configuration ${{ env.CONFIGURATION }} --no-restore --verbosity Minimal
 
       # Version from the tag: semVer (without +metadata, which NuGet does not accept).
       - name: Pack
-        run: dotnet pack --configuration ${{ env.CONFIGURATION }} --no-build --no-restore /p:Version=${{ env.semVer }} --output artifacts
+        run: dotnet pack --configuration ${{ env.CONFIGURATION }} --no-build --no-restore /p:Version=${{ env.semVer }} --output artifacts --verbosity Minimal
 
       # Get a short-lived NuGet API key
       - name: NuGet login (OIDC → temp API key)
@@ -176,4 +176,4 @@ jobs:
           user: ${{ secrets.NUGET_USER }}
 
       - name: Publish to NuGet
-        run: dotnet nuget push "artifacts/*.nupkg" --skip-duplicate --api-key ${{ steps.login.outputs.NUGET_API_KEY }} --source https://api.nuget.org/v3/index.json
+        run: dotnet nuget push "artifacts/*.nupkg" --skip-duplicate --api-key ${{ steps.login.outputs.NUGET_API_KEY }} --source https://api.nuget.org/v3/index.json --verbosity Minimal
