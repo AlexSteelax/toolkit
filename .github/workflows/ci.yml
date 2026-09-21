@@ -127,7 +127,7 @@ jobs:
           user: ${{ secrets.NUGET_USER }}
 
       - name: Publish to NuGet
-        run: dotnet nuget push "artifacts/*.nupkg" --skip-duplicate --api-key ${{ steps.login.outputs.NUGET_API_KEY }} --source https://api.nuget.org/v3/index.json --verbosity Minimal
+        run: dotnet nuget push "artifacts/*.nupkg" --skip-duplicate --api-key ${{ steps.login.outputs.NUGET_API_KEY }} --source https://api.nuget.org/v3/index.json
 
   # Slim publish: build + pack + push for stable tags (vX.Y.Z).
   # Tests for this commit have already been run by CI on main.
