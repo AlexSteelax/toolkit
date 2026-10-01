@@ -113,10 +113,4 @@ public partial class Conduit<T>
         OnWriteReady?.Invoke();
         _writerSignal?.Signal();
     }
-
-    // private void Close()
-    // {
-    //     _writerSignal?.Complete();
-    //     _readerSignal?.Complete();
-    // }
 }

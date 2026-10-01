@@ -3,16 +3,14 @@
 > Namespace: `Steelax.Toolkit.HighPerformance.Concurrency.Primitives`
 > Source: [`CompleteSignal.cs`](../src/Steelax.Toolkit.HighPerformance/Concurrency/Primitives/CompleteSignal.cs)
 
-A lightweight, **single-consumer readiness signal** backed by an `IValueTaskSource<bool>`: a producer raises [`Signal`](#signal), an awaiting consumer wakes via [`WaitAsync`](#waitasync), and the raised readiness signal is consumed via [`TryReset`](#tryreset) (edge-triggered). Completion is a separate terminal latch set by [`Complete`](#complete).
+A lightweight, **single-consumer readiness signal** backed by an `IValueTaskSource<bool>`: a producer raises [`Signal`](#signal), an awaiting consumer wakes via [`WaitAsync`](#waitasync), and the raised readiness signal is consumed via [`TryReset`](#tryreset) (edge-triggered). Completion is a terminal latch set by [`Complete`](#complete).
 
 ## Semantics
 
-Readiness is a latch over a three-state machine: `0 = Idle, 1 = Waiting, 2 = Ready`.
+Readiness is a latch over a four-state machine packed into one `int`: `0 = Idle, 1 = Ready, 2 = Wait, 4 = Completed` (bits may combine).
 
-- **`Signal()`** — **readiness**: a reusable edge-triggered state (`2`). Cleared by `TryReset` so the next write re-raises it. Wakes a registered waiter with `true`.
-- **`Complete()`** — **completion**: latches a terminal flag (never cleared by `TryReset`) and makes every subsequent `WaitAsync` return `false`. It does not wake a waiter by itself — combine with `Signal()` to complete a registered wait (the waiter observes the terminal flag and gets `false`).
-
-Because completion is irreversible, a later `Signal()` still wakes the waiter, but it yields `false` (the terminal flag wins).
+- **`Signal()`** — **readiness**: a reusable edge-triggered state (`1`). Cleared by `TryReset` so the next write re-raises it. Wakes a registered waiter with `true`. Ignored once the signal is completed.
+- **`Complete()`** — **completion**: latches the terminal bit (`4`, never cleared) and makes every subsequent `WaitAsync` return `false`. Wakes a registered waiter immediately with `false`; a waiter that registers afterwards observes the completed bit and returns `false` without parking.
 
 ## Characteristics
 
@@ -33,8 +31,7 @@ var signal = new CompleteSignal();
 // Producer:
 signal.Signal();              // readiness (reusable)
 // On stream end:
-signal.Complete();            // latch completion
-signal.Signal();              // wake the waiter → it observes completion (false)
+signal.Complete();            // latch completion and wake a registered waiter (false)
 
 // Consumer:
 if (signal.TryReset())        // consumes a pending readiness signal without waiting
@@ -63,12 +60,12 @@ else
 |--------|-------------|
 | `ValueTask<bool> WaitAsync()` | Waits for the signal to be raised without blocking the calling thread. Completes with `true` when readiness was signalled, or `false` when the signal was completed (terminal). Completes synchronously when a signal is already pending. |
 | `bool TryReset()` | Consumes a raised readiness signal without waiting. Returns `true` if a readiness signal was pending (now cleared); otherwise `false`. Has no effect on a completed (terminal) signal. |
-| `void Signal()` | Raises readiness, waking an awaiting consumer if one is registered. A registered waiter receives `true` unless the signal was completed, in which case it receives `false`. |
-| `void Complete()` | Latches the terminal completion flag. Does not wake a waiter by itself; subsequent `WaitAsync` calls return `false`. |
+| `void Signal()` | Raises readiness, waking an awaiting consumer if one is registered. A registered waiter receives `true`. Has no effect once the signal is completed. |
+| `void Complete()` | Latches the terminal completion flag and wakes a registered waiter immediately with `false`; every subsequent `WaitAsync` returns `false`. Idempotent. |
 
 ## Notes
 
-- `CompleteSignal` is the readiness core behind the await-based members of [`Conduit<T>`](Conduit.md) (`WaitToReadAsync`/`WaitToWriteAsync`, active when the matching `ConduitBehavior` flag created a signal): `Signal()` on readiness, `Complete()` + `Signal()` on stream completion.
+- `CompleteSignal` is the readiness core behind the await-based members of [`Conduit<T>`](Conduit.md) (`WaitToReadAsync`/`WaitToWriteAsync`, active when the matching `ConduitBehavior` flag created a signal): `Signal()` on readiness, `Complete()` on stream completion (the wake is delivered directly; a trailing `Signal()` is harmless).
 - The `ValueTask<bool>` returned by `WaitAsync` is bound to an internal `IValueTaskSource<bool>` version token; await each returned `ValueTask<bool>` only once.
 
 ## See also

@@ -12,8 +12,8 @@ public static partial class FanInSlimTests
             var source = new FanInSlim();
             source.Signal(2);
 
-            Assert.True(source.TryReset(2));
-            Assert.False(source.TryReset(2)); // already reset
+            Assert.True(source.TryTake(2));
+            Assert.False(source.TryTake(2)); // already reset
         }
 
         [Fact]
@@ -22,7 +22,7 @@ public static partial class FanInSlimTests
             var source = new FanInSlim();
             source.Signal(0);
 
-            Assert.False(source.TryReset(2));
+            Assert.False(source.TryTake(2));
             Assert.True(source.Take().IsSet(0)); // Slot 0 still present
         }
 
@@ -34,7 +34,7 @@ public static partial class FanInSlimTests
         {
             var source = new FanInSlim();
 
-            Assert.Throws<ArgumentOutOfRangeException>(() => source.TryReset(invalidIndex));
+            Assert.Throws<ArgumentOutOfRangeException>(() => source.TryTake(invalidIndex));
         }
     }
 }

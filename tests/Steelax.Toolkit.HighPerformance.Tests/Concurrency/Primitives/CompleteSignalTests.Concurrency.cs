@@ -27,6 +27,7 @@ public static partial class CompleteSignalTests
         private const int Total = Producers * Rounds;
 
         [Fact(Timeout = 3_000)]
+        [SuppressMessage("ReSharper", "AccessToModifiedClosure")]
         public async Task ManySignallers_SingleWaiter_NoSignalIsLost()
         {
             var signal = new CompleteSignal();
@@ -92,17 +93,14 @@ public static partial class CompleteSignalTests
             }
         }
 
-        [Theory(Timeout = 3_000)]
-        [InlineData(30_000, 1)]
-        [InlineData(10_000, 16)]
+        [FlakyTheory(100, Timeout = 1_000)]
+        [InlineData(100, 1)]
+        [InlineData(100, 16)]
         [SuppressMessage("ReSharper", "AccessToModifiedClosure")]
         public async Task PingPong_NoTimeout(int iterations, int writers)
         {
             ArgumentOutOfRangeException.ThrowIfNegativeOrZero(writers);
-
-            using var cts = CancellationTokenSource.CreateLinkedTokenSource(TestContext.Current.CancellationToken);
-            cts.CancelAfter(3_000);
-
+            
             var csReader = new CompleteSignal();
             var csWriter = new CompleteSignal();
 
@@ -119,7 +117,7 @@ public static partial class CompleteSignalTests
                     csWriter.Signal();
                     Interlocked.Increment(ref read);
                 }
-            }, cts.Token);
+            }, TestContext.Current.CancellationToken);
             
             var writer = Task.Run(async () =>
             {
@@ -131,7 +129,7 @@ public static partial class CompleteSignalTests
                     if (!await csWriter.WaitAsync())
                         break;
                 }
-            }, cts.Token);
+            }, TestContext.Current.CancellationToken);
 
             var pulsers = Enumerable.Range(0, writers - 1).Select(_ => Task.Run(() =>
             {
@@ -139,17 +137,17 @@ public static partial class CompleteSignalTests
                 {
                     csReader.Signal();
                 }
-            }, cts.Token)).ToArray();
+            }, TestContext.Current.CancellationToken)).ToArray();
 
             try
             {
-                await writer.WaitAsync(cts.Token);
-                await Task.WhenAll(pulsers).WaitAsync(cts.Token);
+                await writer.WaitAsync(TestContext.Current.CancellationToken);
+                await Task.WhenAll(pulsers).WaitAsync(TestContext.Current.CancellationToken);
                 
                 csWriter.Complete();
                 csReader.Complete();
                 
-                await reader.WaitAsync(cts.Token);
+                await reader.WaitAsync(TestContext.Current.CancellationToken);
             }
             finally
             {

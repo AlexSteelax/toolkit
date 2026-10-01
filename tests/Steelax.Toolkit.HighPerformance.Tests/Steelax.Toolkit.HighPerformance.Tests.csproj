@@ -11,6 +11,7 @@
             <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
         </PackageReference>
         <PackageReference Include="Microsoft.NET.Test.Sdk" />
+        <PackageReference Include="Steelax.XUnit.v3.Flaky" />
         <PackageReference Include="System.IO.Hashing" />
         <PackageReference Include="System.Linq.Async" />
         <PackageReference Include="xunit.runner.visualstudio">

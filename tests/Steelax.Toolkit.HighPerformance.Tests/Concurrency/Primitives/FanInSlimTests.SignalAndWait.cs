@@ -16,11 +16,11 @@ public static partial class FanInSlimTests
             source.Signal(2);
             source.Signal(4);
 
-            await source.WaitAsync();
+            await source.WaitToReadyAsync();
             Assert.True(source.Take().Any);
 
             // Signal after wait — asynchronous completion
-            var waitTask = source.WaitAsync();
+            var waitTask = source.WaitToReadyAsync();
             Assert.False(waitTask.IsCompleted);
 
             source.Signal(1);
@@ -34,15 +34,15 @@ public static partial class FanInSlimTests
             var source = new FanInSlim();
 
             source.Signal(0);
-            await source.WaitAsync();
+            await source.WaitToReadyAsync();
             Assert.True(source.Take().Any);
 
             source.Signal(1);
-            await source.WaitAsync();
+            await source.WaitToReadyAsync();
             Assert.True(source.Take().Any);
 
             source.Signal(2);
-            await source.WaitAsync();
+            await source.WaitToReadyAsync();
             Assert.True(source.Take().Any);
         }
 
@@ -54,7 +54,7 @@ public static partial class FanInSlimTests
 
             Assert.True(source.Take().Any);
 
-            var waitTask = source.WaitAsync();
+            var waitTask = source.WaitToReadyAsync();
             Assert.False(waitTask.IsCompleted);
 
             source.Signal(1);
@@ -70,7 +70,7 @@ public static partial class FanInSlimTests
             for (var i = 0; i < 32; i++)
                 source.Signal(i);
 
-            await source.WaitAsync();
+            await source.WaitToReadyAsync();
             var slots = source.Take();
             Assert.True(slots.Any);
             Assert.Equal(32, slots.Count);
@@ -85,14 +85,14 @@ public static partial class FanInSlimTests
             for (var i = 0; i <= 4; i++)
                 source.Signal(i);
 
-            await source.WaitAsync();
+            await source.WaitToReadyAsync();
             Assert.True(source.Take().Any);
 
             // Sequential signals
             for (var i = 0; i <= 4; i++)
             {
                 source.Signal(i);
-                await source.WaitAsync();
+                await source.WaitToReadyAsync();
                 Assert.True(source.Take().Any);
             }
         }

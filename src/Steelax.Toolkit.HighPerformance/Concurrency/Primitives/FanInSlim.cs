@@ -17,81 +17,71 @@ namespace Steelax.Toolkit.HighPerformance.Concurrency.Primitives;
 /// The consumer is responsible for managing source lifecycle and re-registration.
 /// </para>
 /// <para>
-/// The readiness core follows the same single-word CAS model as <see cref="CompleteSignal"/>: a
-/// <c>_handshake</c> packs the handshake bits (currently only <c>Waiting</c>, since the source of
-/// readiness is the <c>_readyMask</c> itself), and every transition is a bounded CAS loop. The
-/// empty → non-empty transition of the mask (reported by the previous value returned by
-/// <see cref="Interlocked.Or(ref uint, uint)"/> on the ready mask) acts as the readiness edge: either
-/// it claims a registered wait and completes it exactly once, or it leaves the non-empty mask for the
-/// next fast-path. <c>SetResult</c> is invoked outside any lock, so synchronous continuations may
-/// safely re-enter <see cref="WaitAsync"/> without a deadlock.
+/// The readiness handshake is an exact mirror of <see cref="CompleteSignal"/>: a single <c>int</c>
+/// packs the <c>Ready</c>, <c>Wait</c> and <c>Completed</c> bits, and every transition is a bounded
+/// CAS loop. The slot payload (<c>_readyMask</c>) is decoupled: it never decides whether to wait — it
+/// is consulted only on the hot path (to confirm that a charged <c>Ready</c> edge still has an
+/// un-drained payload) and is drained by <see cref="Take"/>. Each signal publishes its slot into the
+/// mask (unconditionally, so it is never lost) and feeds the single-channel handshake exactly like
+/// <see cref="CompleteSignal.Signal"/>: it either claims a registered <c>Wait</c> and delivers
+/// exactly one wake, or charges the <c>Ready</c> bit for the next fast path. <c>SetResult</c> is
+/// invoked outside any CAS, so synchronous continuations may safely re-enter <see cref="WaitToReadyAsync"/>
+/// without a deadlock.
+/// </para>
+/// <para>
+/// Because the edge is charged into the handshake word, the waiter registration CAS
+/// (<c>state | Wait</c>) observes a racing signal as a word change and re-loops — there is no
+/// separate post-registration re-check, exactly like <see cref="CompleteSignal"/>.
+/// </para>
+/// <para>
+/// <see cref="CompleteSignal.Complete"/> latches the terminal completion bit. After completion, further
+/// <see cref="Signal"/> calls are ignored, while <see cref="Take"/> and <see cref="TryTake"/> remain
+/// usable so any slots that were signalled before the completion can still be drained.
 /// </para>
 /// </remarks>
 [PublicAPI]
-public sealed class FanInSlim(bool allowSynchronousContinuations = true) : IValueTaskSource
+public sealed class FanInSlim(bool allowSynchronousContinuations = true) : CompleteSignal(allowSynchronousContinuations)
 {
-    private const int Waiting = 0x1;
-
-    // Readiness mask: the source of truth (non-empty ⟺ at least one event to consume).
+    // Readiness mask: the slot payload. Non-empty ⟺ at least one event to consume. Consulted only on
+    // the hot path and drained by Take; it never drives the wait/registration decision.
     private uint _readyMask;
 
-    // Handshake bits: Waiting = a waiter is registered on the current core version.
-    private int _handshake;
-
-    private ManualResetValueTaskSourceCore<object?> _core = new()
+    /// <inheritdoc/>
+    [PublicAPI]
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public override ValueTask WaitToReadyAsync()
     {
-        RunContinuationsAsynchronously = !allowSynchronousContinuations
-    };
+        return base.WaitToReadyAsync();
+    }
 
-    /// <summary>
-    /// Waits until at least one slot signals readiness.
-    /// </summary>
-    /// <returns>
-    /// A <see cref="ValueTask"/> that completes when a slot fires;
-    /// the fired slots are then obtained via <see cref="Take"/>.
-    /// </returns>
+    /// <inheritdoc/>
+    [PublicAPI]
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public override ValueTask<bool> WaitAsync()
+    {
+        return base.WaitAsync();
+    }
+
+    /// <inheritdoc/>
     /// <remarks>
-    /// Returns synchronously if a signal is already pending.
+    /// This flag stays set once latched. It does not reflect the state of <see cref="_readyMask"/>:
+    /// slots signalled before completion can still be drained via <see cref="Take"/>.
     /// </remarks>
     [PublicAPI]
-    public ValueTask WaitAsync()
+    public override bool IsCompleted
     {
-        // Fast path: a ready slot is already pending — no registration needed.
-        if (Volatile.Read(ref _readyMask) != 0)
-            return ValueTask.CompletedTask;
-
-        while (true)
-        {
-            // Re-arm the core to a fresh version only when we are about to register.
-            _core.Reset();
-
-            // A slot fired while we were re-arming: report it synchronously — the mask stays visible
-            // for the caller's Take. We do not touch the core here; a Reset-per-round is harmless and
-            // the next registration re-arms a fresh version.
-            if (Volatile.Read(ref _readyMask) != 0)
-                return ValueTask.CompletedTask;
-
-            // Register as the waiter. Only one thread can win the Waiting bit, so exactly one
-            // registration owns one core version.
-            if (Interlocked.CompareExchange(ref _handshake, Waiting, 0) == 0)
-            {
-                // A first slot may have fired between the mask check above and the registration, after
-                // the signaler already read the handshake without a waiter. Re-check the mask and, if
-                // non-empty, release the wait and report it synchronously instead of parking.
-                if (Volatile.Read(ref _readyMask) != 0 && Interlocked.CompareExchange(ref _handshake, 0, Waiting) == Waiting)
-                    return ValueTask.CompletedTask;
-
-                // Either the mask is still empty (we wait for a future Signal), or the signaler already
-                // claimed the Waiting bit and will deliver SetResult for this fresh core.
-                return new ValueTask(this, _core.Version);
-            }
-        }
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => base.IsCompleted;
     }
 
     /// <summary>Gets and clears the set of ready slots without waiting.</summary>
     /// <returns>
     /// A <see cref="SlotSet"/> of the slots fired since the last take, or an empty set.
     /// </returns>
+    /// <remarks>
+    /// Remains usable after <see cref="CompleteSignal.Complete"/> — any slots that were signalled before completion
+    /// can still be drained.
+    /// </remarks>
     [PublicAPI]
     public SlotSet Take()
     {
@@ -106,6 +96,15 @@ public sealed class FanInSlim(bool allowSynchronousContinuations = true) : IValu
         return new SlotSet(ready);
     }
 
+    /// <summary>
+    /// 
+    /// </summary>
+    /// <returns></returns>
+    public SlotSet Peek()
+    {
+        return new SlotSet(Volatile.Read(ref _readyMask));
+    }
+
     /// <summary>Resets the ready flag of the specified slot, if it was set.</summary>
     /// <param name="index">The slot index (0..31) to reset.</param>
     /// <returns>
@@ -113,7 +112,7 @@ public sealed class FanInSlim(bool allowSynchronousContinuations = true) : IValu
     /// otherwise, <see langword="false"/>.
     /// </returns>
     [PublicAPI]
-    public bool TryReset(int index)
+    public bool TryTake(int index)
     {
         ArgumentOutOfRangeException.ThrowIfNegative(index);
         ArgumentOutOfRangeException.ThrowIfGreaterThanOrEqual(index, sizeof(int) * 8);
@@ -129,6 +128,11 @@ public sealed class FanInSlim(bool allowSynchronousContinuations = true) : IValu
     /// Marks the specified slot as ready, waking the awaiting consumer if it was idle.
     /// </summary>
     /// <param name="index">The slot index (0..31) to signal.</param>
+    /// <remarks>
+    /// Has no effect once the instance is completed via <see cref="CompleteSignal.Complete"/>.
+    /// May be called from many threads. The wake (SetResult) is delivered after the CAS claim,
+    /// so a synchronous continuation can safely re-enter <see cref="WaitToReadyAsync"/>.
+    /// </remarks>
     [PublicAPI]
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void Signal(int index)
@@ -136,23 +140,15 @@ public sealed class FanInSlim(bool allowSynchronousContinuations = true) : IValu
         ArgumentOutOfRangeException.ThrowIfNegative(index);
         ArgumentOutOfRangeException.ThrowIfGreaterThanOrEqual(index, sizeof(int) * 8);
 
-        // Publish the event unconditionally: the mask is the source of truth, so the event is never
-        // lost regardless of who is listening.
-        var previous = Interlocked.Or(ref _readyMask, 1u << index);
-
-        // Only the empty → non-empty transition of the mask acts as the readiness edge (like the
-        // Ready bit in CompleteSignal). Further signals while the mask is already non-empty have
-        // already been (or will be) observed by the active waiter.
-        if (previous != 0)
+        // Completion was latched: further signals are meaningless and must not even touch the payload.
+        if (IsCompleted)
             return;
 
-        // The mask just became non-empty: if a waiter is registered, claim the Waiting bit and
-        // deliver exactly one wake. Otherwise the non-empty mask is observed by the next fast path.
-        if ((Volatile.Read(ref _handshake) & Waiting) != 0
-            && Interlocked.CompareExchange(ref _handshake, 0, Waiting) == Waiting)
-        {
-            _core.SetResult(null);
-        }
+        // Publish the slot into the payload mask unconditionally: the mask is never lost regardless
+        // of who is listening — the consumer drains it via Take.
+        _ = Interlocked.Or(ref _readyMask, 1u << index);
+
+        base.Signal();
     }
 
     /// <summary>Creates a zero-allocation signal callback for the specified slot.</summary>
@@ -165,16 +161,14 @@ public sealed class FanInSlim(bool allowSynchronousContinuations = true) : IValu
 
         return new FanInSignalCallback(this, index);
     }
-
-    /// <summary>Gets the status of the current operation.</summary>
-    ValueTaskSourceStatus IValueTaskSource.GetStatus(short token)
-        => _core.GetStatus(token);
-
-    /// <summary>Completes the awaited operation; the mask is consumed via <see cref="Take"/>.</summary>
-    void IValueTaskSource.GetResult(short token)
-        => _core.GetResult(token);
-
-    /// <summary>Schedules the continuation for the awaiting consumer.</summary>
-    void IValueTaskSource.OnCompleted(Action<object?> continuation, object? state, short token, ValueTaskSourceOnCompletedFlags flags)
-        => _core.OnCompleted(continuation, state, token, flags);
+    
+    /// <remarks>
+    /// A charged <see cref="CompleteSignal"/> edge is reportable only while it still has an un-drained
+    /// slot payload; edges left over after <see cref="Take"/> (stale raises) are suppressed, so a wait
+    /// never completes with an empty mask.
+    /// </remarks>
+    protected override bool HasPendingReadiness()
+    {
+        return Volatile.Read(ref _readyMask) != 0;
+    }
 }

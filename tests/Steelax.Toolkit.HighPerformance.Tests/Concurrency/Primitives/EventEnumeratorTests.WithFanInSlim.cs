@@ -17,7 +17,7 @@ public static partial class EventEnumeratorTests
 
             adapter.MoveNext();
 
-            await fanIn.WaitAsync();
+            await fanIn.WaitToReadyAsync();
             var slots = fanIn.Take();
 
             Assert.True(slots.IsSet(slot));
@@ -39,7 +39,7 @@ public static partial class EventEnumeratorTests
             Assert.True(adapter.GetState().IsPending);
 
             // Consumer waits on fan-in while the source is in flight.
-            var waitTask = fanIn.WaitAsync();
+            var waitTask = fanIn.WaitToReadyAsync();
             tcs.SetResult(7);
             await waitTask.AsTask().WaitAsync(TimeSpan.FromSeconds(5), TestContext.Current.CancellationToken);
 

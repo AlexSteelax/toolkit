@@ -5,7 +5,7 @@ namespace Steelax.Toolkit.HighPerformance.Tests.Concurrency.Primitives;
 public static partial class FanInSlimTests
 {
     /// <summary>
-    ///     Stress-repro of the lost-wakeup race in <see cref="FanInSlim.WaitAsync" />.
+    ///     Stress-repro of the lost-wakeup race in <see cref="FanInSlim.WaitToReadyAsync" />.
     ///     Each capsule uses a fresh instance pre-charged to the <c>state == 2</c> (signaled but taken)
     ///     condition, then races a single <see cref="FanInSlim.Signal" /> against the waiter registration
     ///     inside <c>WaitAsync</c>. If the signal lands in the window between the mask check and the waiter
@@ -28,7 +28,7 @@ public static partial class FanInSlimTests
 
                 var task = Task.Run(async () =>
                 {
-                    var wait = warm.WaitAsync();
+                    var wait = warm.WaitToReadyAsync();
                     if (!wait.IsCompleted)
                         await wait;
                     warm.Take();
@@ -50,7 +50,7 @@ public static partial class FanInSlimTests
 
                 var waiter = Task.Run(async () =>
                 {
-                    var wait = fanIn.WaitAsync();
+                    var wait = fanIn.WaitToReadyAsync();
                     if (!wait.IsCompleted)
                         await wait; // May hang forever if the racing signal is lost.
                     fanIn.Take();

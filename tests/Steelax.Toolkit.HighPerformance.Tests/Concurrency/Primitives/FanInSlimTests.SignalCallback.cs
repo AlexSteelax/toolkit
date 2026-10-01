@@ -19,6 +19,18 @@ public static partial class FanInSlimTests
         }
 
         [Fact]
+        public void Handler_PropagatesSignalsToBoundSlot()
+        {
+            var source = new FanInSlim();
+            var callback = source.GetSignalCallback(2);
+
+            callback.Handler();
+
+            var slots = source.Take();
+            Assert.True(slots.IsSet(2));
+        }
+
+        [Fact]
         public void Default_IsNoOp()
         {
             var callback = default(FanInSignalCallback);

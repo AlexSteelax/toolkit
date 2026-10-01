@@ -64,7 +64,7 @@ public static partial class CompleteSignalTests
             var wait = signal.WaitAsync();
             Assert.False(wait.IsCompleted);
 
-            // Complete only latches the flag; Signal wakes the waiter, which observes the terminal flag.
+            // Complete wakes the registered waiter directly; the trailing Signal is a no-op.
             signal.Complete();
             signal.Signal();
 
@@ -79,7 +79,7 @@ public static partial class CompleteSignalTests
             signal.Complete();
 
             // Completion is a one-shot latch: TryReset cannot clear it, and every wait returns false.
-            Assert.True(signal.TryReset());
+            Assert.False(signal.TryReset());
             Assert.False(await signal.WaitAsync());
         }
 
