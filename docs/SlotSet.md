@@ -22,19 +22,13 @@ set.Any;              // true
 set.Count;            // 3
 set.IsSet(2);         // true
 
-var rest = set.Pop(out var first); // first = 0 (lowest set slot removed)
-rest.Mask;                          // raw bitmask of the remaining slots
+var removed = set.TryPop(out var first, out var rest); // first = 0, removed = true (lowest set slot removed)
+rest.Mask;                                              // raw bitmask of the remaining slots
 
 var fromMask = SlotSet.FromMask(0b1101u); // slots 0, 2, 3
 ```
 
 ## API
-
-### Constants
-
-| Member | Type | Description |
-|--------|------|-------------|
-| `None` | `int` | Sentinel index (`-1`) returned by `Pop` when no slots are set. |
 
 ### Properties
 
@@ -53,21 +47,20 @@ var fromMask = SlotSet.FromMask(0b1101u); // slots 0, 2, 3
 
 ### Methods
 
-| Method | Description |
-|--------|-------------|
-| `IsSet(int index)` | `true` when the slot is set; throws for indices outside 0..31. |
-| `Pop(out int index)` | Removes and returns the **lowest-indexed** set slot (`None` when empty); returns the remaining set. |
-| `Remove(int index, out bool original)` | Removes a slot; `original` is `true` when the slot was present. |
-| `ToString()` | Raw mask followed by set indices, e.g. `"11[0 1 3]"`. |
+| Method                                  | Description |
+|-----------------------------------------|-------------|
+| `IsSet(int index)`                      | `true` when the slot is set; throws for indices outside 0..31. |
+| `TryPop(out int index, out SlotSet set)`               | Removes the **lowest-indexed** set slot; `true` when a slot was removed, with the remaining set in `set`. |
+| `TryRemove(int index, out SlotSet set)` | Removes a slot when it is set; `true` when it was present, with the resulting set in `set`. |
+| `ToString()`                            | Raw mask followed by set indices, e.g. `"11[0 1 3]"`. |
 
 ## Example: consuming slots one by one
 
 ```csharp
 var set = SlotSet.Of(1, 3, 7);
 
-while (set.Any)
+while (set.TryPop(out var index, out set))
 {
-    set = set.Pop(out var index);
     Console.WriteLine($"handled slot {index}"); // 1, 3, 7
 }
 ```

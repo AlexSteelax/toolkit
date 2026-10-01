@@ -1,17 +1,19 @@
-﻿using Steelax.Toolkit.HighPerformance.Primitives;
+using Steelax.Toolkit.HighPerformance.Primitives;
 
 namespace Steelax.Toolkit.HighPerformance.Tests.Primitives;
 
 public static partial class SlotSetTests
 {
-    public sealed class Pop
+    public sealed class TryPop
     {
         [Fact]
         public void SingleBit_ReturnsSlotAndEmptyRest()
         {
             var set = SlotSet.FromMask(4); // slot 2
-            var rest = set.Pop(out var index);
 
+            var removed = set.TryPop(out var index, out var rest);
+
+            Assert.True(removed);
             Assert.Equal(2, index);
             Assert.False(rest.Any);
         }
@@ -21,25 +23,26 @@ public static partial class SlotSetTests
         {
             var set = SlotSet.FromMask(0b10101); // slots 0, 2, 4
 
-            set = set.Pop(out var i0);
+            Assert.True(set.TryPop(out var i0, out set));
             Assert.Equal(0, i0);
 
-            set = set.Pop(out var i2);
+            Assert.True(set.TryPop(out var i2, out set));
             Assert.Equal(2, i2);
 
-            set = set.Pop(out var i4);
+            Assert.True(set.TryPop(out var i4, out set));
             Assert.Equal(4, i4);
 
             Assert.False(set.Any);
         }
 
         [Fact]
-        public void Empty_ReturnsNoneAndEmptyRest()
+        public void Empty_ReturnsFalseAndEmptyRest()
         {
             var set = SlotSet.FromMask(0);
-            var rest = set.Pop(out var index);
 
-            Assert.Equal(SlotSet.None, index);
+            var removed = set.TryPop(out _, out var rest);
+
+            Assert.False(removed);
             Assert.False(rest.Any);
         }
 
@@ -50,11 +53,11 @@ public static partial class SlotSetTests
 
             for (var expected = 0; expected < 4; expected++)
             {
-                set = set.Pop(out var actual);
+                Assert.True(set.TryPop(out var actual, out set));
                 Assert.Equal(expected, actual);
             }
 
-            Assert.False(set.Any);
+            Assert.False(set.TryPop(out _, out _));
         }
     }
 }
