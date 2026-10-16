@@ -162,5 +162,65 @@ public static partial class CompleteSignalTests
             else
                 Assert.True(Volatile.Read(ref read) >= iterations);
         }
+
+        /// <summary>
+        ///     Two tasks run an unbounded wait → signal chain against each other (ping-pong) while the
+        ///     main test latches <see cref="CompleteSignal.Complete" /> on both endpoints to break the
+        ///     chain. Both tasks must observe the terminal bit and exit without timing out, regardless of
+        ///     where they are in the handshake when completion lands.
+        /// </summary>
+        [FlakyFact(10, Timeout = 3_000)]
+        [SuppressMessage("ReSharper", "AccessToModifiedClosure")]
+        public async Task InfinitePingPong_Complete_BreaksTheChain()
+        {
+            var csPing = new CompleteSignal();
+            var csPong = new CompleteSignal();
+
+            var pings = 0L;
+            var pongs = 0L;
+
+            var ping = Task.Run(async () =>
+            {
+                while (await csPing.WaitAsync())
+                {
+                    csPong.Signal();
+                    Interlocked.Increment(ref pings);
+                }
+            }, TestContext.Current.CancellationToken);
+
+            var pong = Task.Run(async () =>
+            {
+                while (await csPong.WaitAsync())
+                {
+                    csPing.Signal();
+                    Interlocked.Increment(ref pongs);
+                }
+            }, TestContext.Current.CancellationToken);
+
+            // Kick off the chain; after this the two tasks ping-pong indefinitely.
+            csPing.Signal();
+
+            // Let the chain run, then interrupt it from the main test.
+            await Task.Delay(100, TestContext.Current.CancellationToken);
+
+            csPing.Complete();
+            csPong.Complete();
+
+            try
+            {
+                await ping.WaitAsync(TestContext.Current.CancellationToken);
+                await pong.WaitAsync(TestContext.Current.CancellationToken);
+            }
+            finally
+            {
+                output.WriteLine($"ping:pong={Volatile.Read(ref pings)}:{Volatile.Read(ref pongs)}");
+            }
+
+            // The chain must have actually been running before completion broke it.
+            Assert.True(Volatile.Read(ref pings) > 0);
+            Assert.True(Volatile.Read(ref pongs) > 0);
+            Assert.True(csPing.IsCompleted);
+            Assert.True(csPong.IsCompleted);
+        }
     }
 }
