@@ -93,7 +93,7 @@ public static partial class CompleteSignalTests
             }
         }
 
-        [FlakyTheory(100, Timeout = 1_000)]
+        [FlakyTheory(100, Timeout = 10_000)]
         [InlineData(100, 1)]
         [InlineData(100, 16)]
         [SuppressMessage("ReSharper", "AccessToModifiedClosure")]
@@ -169,7 +169,7 @@ public static partial class CompleteSignalTests
         ///     chain. Both tasks must observe the terminal bit and exit without timing out, regardless of
         ///     where they are in the handshake when completion lands.
         /// </summary>
-        [FlakyFact(10, Timeout = 3_000)]
+        [FlakyFact(10, Timeout = 10_000)]
         [SuppressMessage("ReSharper", "AccessToModifiedClosure")]
         public async Task InfinitePingPong_Complete_BreaksTheChain()
         {

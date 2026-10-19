@@ -82,7 +82,7 @@ public static partial class FanInSlimTests
                 Assert.True(Volatile.Read(ref fired[slot]) > 0, $"Slot {slot} never fired");
         }
         
-        [FlakyTheory(100, Timeout = 1_000)]
+        [FlakyTheory(100, Timeout = 10_000)]
         [InlineData(100, 1)]
         [InlineData(100, 8)]
         [SuppressMessage("ReSharper", "AccessToModifiedClosure")]

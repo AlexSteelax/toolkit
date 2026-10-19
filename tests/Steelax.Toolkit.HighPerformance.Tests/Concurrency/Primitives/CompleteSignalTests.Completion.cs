@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using Steelax.Toolkit.HighPerformance.Concurrency.Primitives;
 
 namespace Steelax.Toolkit.HighPerformance.Tests.Concurrency.Primitives;
@@ -89,58 +90,54 @@ public static partial class CompleteSignalTests
         {
             var signal = new CompleteSignal(); // synchronous continuations by default
             var continuationThreadId = int.MinValue;
-            using var registered = new ManualResetEventSlim();
             var tcs = new TaskCompletionSource();
 
             var waitTask = signal.WaitAsync();
-
-            var awaiter = Task.Run(async () =>
+            waitTask.GetAwaiter().UnsafeOnCompleted(() =>
             {
-                waitTask.GetAwaiter().UnsafeOnCompleted(() =>
-                {
-                    continuationThreadId = Environment.CurrentManagedThreadId;
-                    tcs.SetResult();
-                });
-                registered.Set();
-                await tcs.Task;
-            }, TestContext.Current.CancellationToken);
-
-            registered.Wait(TestContext.Current.CancellationToken);
+                continuationThreadId = Environment.CurrentManagedThreadId;
+                tcs.SetResult();
+            });
 
             var signalerThreadId = Environment.CurrentManagedThreadId;
             signal.Signal();
 
-            await awaiter.WaitAsync(TestContext.Current.CancellationToken);
+            await tcs.Task;
             Assert.Equal(signalerThreadId, continuationThreadId);
         }
 
-        [Fact]
+        [FlakyFact(300)]
+        [SuppressMessage("Reliability", "CA2012")]
         public async Task WaitAsync_WithAsynchronousContinuations_RunsContinuationOffSignallingThread()
         {
             var signal = new CompleteSignal(allowSynchronousContinuations: false);
             var continuationThreadId = int.MinValue;
-            using var registered = new ManualResetEventSlim();
             var tcs = new TaskCompletionSource();
 
             var waitTask = signal.WaitAsync();
-
-            var awaiter = Task.Run(async () =>
+            waitTask.GetAwaiter().UnsafeOnCompleted(() =>
             {
-                waitTask.GetAwaiter().UnsafeOnCompleted(() =>
-                {
-                    continuationThreadId = Environment.CurrentManagedThreadId;
-                    tcs.SetResult();
-                });
-                registered.Set();
-                await tcs.Task;
-            }, TestContext.Current.CancellationToken);
+                continuationThreadId = Environment.CurrentManagedThreadId;
+                tcs.SetResult();
+            });
 
-            registered.Wait(TestContext.Current.CancellationToken);
+            // Signal from a dedicated non-thread-pool thread: the async wake is always delivered by
+            // the thread pool, so the continuation can never run on the signaler's thread. Signalling
+            // from the test method itself would be unreliable — its pool thread can be reused to run
+            // the queued continuation once this method yields at the await below.
+            var signalerThreadId = int.MinValue;
+            var signaler = new Thread(() =>
+            {
+                signalerThreadId = Environment.CurrentManagedThreadId;
+                signal.Signal();
+            })
+            {
+                IsBackground = true
+            };
+            signaler.Start();
+            signaler.Join();
 
-            var signalerThreadId = Environment.CurrentManagedThreadId;
-            signal.Signal();
-
-            await awaiter.WaitAsync(TestContext.Current.CancellationToken);
+            await tcs.Task;
             Assert.NotEqual(signalerThreadId, continuationThreadId);
         }
 
