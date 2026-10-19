@@ -77,14 +77,25 @@ public readonly record struct SlotSet
         return (_slots & (1u << index)) != 0;
     }
 
-    /// <summary>Removes and returns the lowest-indexed set slot.</summary>
+    /// <summary>
+    /// Removes and returns the lowest-indexed set slot at or after a start position, scanning the
+    /// mask cyclically.
+    /// </summary>
     /// <param name="set">The remaining set with the popped bit cleared.</param>
     /// <param name="index">The removed slot index (only meaningful when the method returns <see langword="true"/>).</param>
+    /// <param name="started">
+    /// The slot index (0..31) at which the search begins; slots before <paramref name="started"/> are
+    /// considered after slot 31, so e.g. with <c>started = 2</c> the slots pop as
+    /// <c>2, 3, ..., 31, 0, 1</c>. Defaults to <c>0</c> for the plain lowest-first order.
+    /// </param>
     /// <returns><see langword="true"/> when a slot was removed; otherwise, <see langword="false"/>.</returns>
+    /// <exception cref="ArgumentOutOfRangeException"><paramref name="started"/> is outside 0..31.</exception>
     [PublicAPI]
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public bool TryPop(out int index, out SlotSet set)
+    public bool TryPop(out int index, out SlotSet set, int started = 0)
     {
+        ThrowIfInvalidSlot(started);
+
         if (_slots == 0)
         {
             set = this;
@@ -92,8 +103,11 @@ public readonly record struct SlotSet
             return false;
         }
 
-        index = BitOperations.TrailingZeroCount(_slots);
-        set = new SlotSet(_slots & (_slots - 1));
+        // Rotate so the search begins at `started`, find the lowest set slot, and map it back. For
+        // started == 0 the 32-bit shift is a no-op and this reduces to the plain trailing-zero scan.
+        var rotated = (_slots << (32 - started)) | (_slots >> started);
+        index = (BitOperations.TrailingZeroCount(rotated) + started) & 31;
+        set = new SlotSet(_slots & ~(1u << index));
 
         return true;
     }
@@ -117,6 +131,27 @@ public readonly record struct SlotSet
         set = new SlotSet(_slots & ~bit);
 
         return removed;
+    }
+
+    /// <summary>Sets the specified slot when it is not already set.</summary>
+    /// <param name="index">The slot index (0..31) to set.</param>
+    /// <param name="set">
+    /// The resulting set with the slot set, or the original set when the slot was already present.
+    /// </param>
+    /// <returns><see langword="true"/> when the slot was absent and is now set; otherwise, <see langword="false"/>.</returns>
+    /// <exception cref="ArgumentOutOfRangeException"><paramref name="index"/> is outside 0..31.</exception>
+    [PublicAPI]
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public bool TrySet(int index, out SlotSet set)
+    {
+        ThrowIfInvalidSlot(index);
+
+        var bit = 1u << index;
+        var added = (_slots & bit) == 0;
+
+        set = new SlotSet(_slots | bit);
+
+        return added;
     }
 
     /// <summary>Returns the raw mask value followed by the set slot indices, e.g. <c>"11[0 1 3]"</c>.</summary>
