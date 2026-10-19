@@ -88,12 +88,12 @@ public sealed class FanInSlim(bool allowSynchronousContinuations = true) : Compl
         var ready = Volatile.Read(ref _readyMask);
 
         if (ready == 0)
-            return new SlotSet();
+            return default;
 
         // Only clear the bits being returned; concurrent completions are preserved.
         _ = Interlocked.And(ref _readyMask, ~ready);
 
-        return new SlotSet(ready);
+        return SlotSet.FromMask(ready);
     }
 
     /// <summary>
@@ -102,7 +102,7 @@ public sealed class FanInSlim(bool allowSynchronousContinuations = true) : Compl
     /// <returns></returns>
     public SlotSet Peek()
     {
-        return new SlotSet(Volatile.Read(ref _readyMask));
+        return SlotSet.FromMask(Volatile.Read(ref _readyMask));
     }
 
     /// <summary>Resets the ready flag of the specified slot, if it was set.</summary>

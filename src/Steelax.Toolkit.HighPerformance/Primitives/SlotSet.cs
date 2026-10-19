@@ -16,13 +16,41 @@ public readonly record struct SlotSet
     private readonly uint _slots;
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    internal SlotSet(uint slots) => _slots = slots;
+    private SlotSet(uint slots) => _slots = slots;
 
     /// <summary>Creates a <see cref="SlotSet"/> from a raw bitmask.</summary>
     /// <param name="mask">A bitmask where each set bit (0..31) is a slot index.</param>
     [PublicAPI]
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static SlotSet FromMask(uint mask) => new(mask);
+
+    /// <summary>Creates a <see cref="SlotSet"/> with the lowest <paramref name="count"/> slots set.</summary>
+    /// <param name="count">The number of slots (0..32) to set.</param>
+    /// <exception cref="ArgumentOutOfRangeException"><paramref name="count"/> is outside 0..32.</exception>
+    [PublicAPI]
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static SlotSet OfBits(int count)
+    {
+        ArgumentOutOfRangeException.ThrowIfNegative(count);
+        ArgumentOutOfRangeException.ThrowIfGreaterThan(count, 32);
+
+        // 1u << 32 wraps to 1, so the all-32-bits case must be handled explicitly.
+        return new SlotSet(count == 32 ? uint.MaxValue : (1u << count) - 1);
+    }
+
+    /// <summary>Creates a <see cref="SlotSet"/> with every slot set except the lowest <paramref name="count"/>.</summary>
+    /// <param name="count">The number of lowest slots (0..32) to clear.</param>
+    /// <exception cref="ArgumentOutOfRangeException"><paramref name="count"/> is outside 0..32.</exception>
+    [PublicAPI]
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static SlotSet AllExcept(int count)
+    {
+        ArgumentOutOfRangeException.ThrowIfNegative(count);
+        ArgumentOutOfRangeException.ThrowIfGreaterThan(count, 32);
+
+        // ~((1u << count) - 1) wraps for count == 32, so the all-cleared case is handled explicitly.
+        return new SlotSet(count == 32 ? 0u : ~((1u << count) - 1));
+    }
 
     /// <summary>Creates a <see cref="SlotSet"/> from slot indices.</summary>
     /// <param name="slots">The slot indices (0..31) to set.</param>
@@ -55,6 +83,14 @@ public readonly record struct SlotSet
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         get => _slots != 0;
+    }
+
+    /// <summary>Gets a value indicating whether all 32 slots are set.</summary>
+    [PublicAPI]
+    public bool All
+    {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _slots == uint.MaxValue;
     }
 
     /// <summary>Gets the number of set slots.</summary>

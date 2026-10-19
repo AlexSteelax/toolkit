@@ -115,6 +115,24 @@ public static partial class SlotSetTests
         }
 
         [Theory]
+        [InlineData(0b111u, 0, 0, 0b110u)]
+        [InlineData(0b111u, 2, 2, 0b011u)]
+        [InlineData(0b10100u, 1, 2, 0b10000u)]
+        [InlineData(0b10100u, 3, 4, 0b100u)]
+        [InlineData(0b1000001u, 6, 6, 1u)]
+        [InlineData(1u, 1, 0, 0u)]
+        [InlineData(0x8000_0000u, 0, 31, 0u)]
+        [InlineData(0x8000_0001u, 31, 31, 1u)]
+        public void WithVariousMasksAndStartPositions_PopsExpectedSlot(uint mask, int started, int expectedIndex, uint expectedRestMask)
+        {
+            var removed = SlotSet.FromMask(mask).TryPop(out var index, out var rest, started);
+
+            Assert.True(removed);
+            Assert.Equal(expectedIndex, index);
+            Assert.Equal(expectedRestMask, rest.Mask);
+        }
+
+        [Theory]
         [InlineData(-1)]
         [InlineData(32)]
         public void WithInvalidStarted_ThrowsArgumentOutOfRangeException(int invalid)
