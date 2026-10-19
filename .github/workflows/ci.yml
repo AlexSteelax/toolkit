@@ -83,12 +83,14 @@ jobs:
 
   # Slim publish: build + pack + push for preview tags (vX.Y.Z-preview.N).
   # Tests for this commit have already been run by CI on main.
+  # Preview packages go to GitHub Packages (not nuget.org); stable tags publish to nuget.org.
   publish-preview:
-    name: Publish Preview to NuGet
+    name: Publish Preview to GitHub Packages
     if: contains(github.ref, '-preview')
     runs-on: ubuntu-latest
     permissions:
-      id-token: write
+      contents: read
+      packages: write
 
     steps:
       - uses: actions/checkout@v4
@@ -119,15 +121,10 @@ jobs:
       - name: Pack
         run: dotnet pack --configuration ${{ env.CONFIGURATION }} --no-build --no-restore /p:Version=${{ steps.version.outputs.version }} --output artifacts --verbosity Minimal
 
-      # Get a short-lived NuGet API key
-      - name: NuGet login (OIDC → temp API key)
-        uses: NuGet/login@v1
-        id: login
-        with:
-          user: ${{ secrets.NUGET_USER }}
-
-      - name: Publish to NuGet
-        run: dotnet nuget push "artifacts/*.nupkg" --skip-duplicate --api-key ${{ steps.login.outputs.NUGET_API_KEY }} --source https://api.nuget.org/v3/index.json
+      # Publish the preview package to GitHub Packages instead of nuget.org.
+      # GITHUB_TOKEN is scoped to this repository's GitHub Packages registry.
+      - name: Publish to GitHub Packages
+        run: dotnet nuget push "artifacts/*.nupkg" --api-key ${{ secrets.GITHUB_TOKEN }} --source https://nuget.pkg.github.com/${{ github.repository_owner }}/index.json
 
   # Slim publish: build + pack + push for stable tags (vX.Y.Z).
   # Tests for this commit have already been run by CI on main.
