@@ -26,8 +26,8 @@ public static partial class AdvanceBitOperationsTests
         {
             var mask = AdvanceBitOperations.OfFirstBits(30);
 
-            Assert.True(AdvanceBitOperations.TrySet(mask, 30, out mask));
-            Assert.True(AdvanceBitOperations.TrySet(mask, 31, out mask));
+            Assert.True(AdvanceBitOperations.TrySet(ref mask, 30));
+            Assert.True(AdvanceBitOperations.TrySet(ref mask, 31));
             Assert.True(AdvanceBitOperations.HasAll(mask));
         }
 

@@ -9,21 +9,21 @@ public static partial class AdvanceBitOperationsTests
         {
             var mask = 0b1011u; // slots 0, 1, 3
 
-            var removed = AdvanceBitOperations.TryUnset(mask, 1, out var rest);
+            var removed = AdvanceBitOperations.TryUnset(ref mask, 1);
 
             Assert.True(removed);
-            Assert.Equal(0b1001u, rest); // slots 0, 3
+            Assert.Equal(0b1001u, mask); // slots 0, 3
         }
 
         [Fact]
-        public void UnsetSlot_ReturnsFalseAndUnchangedRest()
+        public void UnsetSlot_ReturnsFalseAndLeavesMask()
         {
             var mask = 0b1011u; // slots 0, 1, 3
 
-            var removed = AdvanceBitOperations.TryUnset(mask, 2, out var rest);
+            var removed = AdvanceBitOperations.TryUnset(ref mask, 2);
 
             Assert.False(removed);
-            Assert.Equal(0b1011u, rest);
+            Assert.Equal(0b1011u, mask);
         }
 
         [Theory]
@@ -35,7 +35,9 @@ public static partial class AdvanceBitOperationsTests
         [InlineData(uint.MaxValue, 31, true, 0x7FFF_FFFFu)]
         public void WithVariousMasksAndIndices_RemovesAndReportsRemoved(uint mask, int index, bool expectedRemoved, uint expectedMask)
         {
-            var removed = AdvanceBitOperations.TryUnset(mask, index, out var rest);
+            var rest = mask;
+
+            var removed = AdvanceBitOperations.TryUnset(ref rest, index);
 
             Assert.Equal(expectedRemoved, removed);
             Assert.Equal(expectedMask, rest);
@@ -46,7 +48,9 @@ public static partial class AdvanceBitOperationsTests
         [InlineData(32)]
         public void WithInvalidIndex_ThrowsArgumentOutOfRangeException(int invalid)
         {
-            Assert.Throws<ArgumentOutOfRangeException>(() => AdvanceBitOperations.TryUnset(1, invalid, out _));
+            var mask = 1u;
+
+            Assert.Throws<ArgumentOutOfRangeException>(() => AdvanceBitOperations.TryUnset(ref mask, invalid));
         }
     }
 }

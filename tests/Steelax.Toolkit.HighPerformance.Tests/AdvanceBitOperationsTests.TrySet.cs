@@ -9,30 +9,32 @@ public static partial class AdvanceBitOperationsTests
         {
             var mask = 0b1011u; // slots 0, 1, 3
 
-            var added = AdvanceBitOperations.TrySet(mask, 2, out var rest);
+            var added = AdvanceBitOperations.TrySet(ref mask, 2);
 
             Assert.True(added);
-            Assert.Equal(0b1111u, rest); // slots 0, 1, 2, 3
+            Assert.Equal(0b1111u, mask); // slots 0, 1, 2, 3
         }
 
         [Fact]
-        public void SetSlot_ReturnsFalseAndUnchangedRest()
+        public void SetSlot_ReturnsFalseAndLeavesMask()
         {
             var mask = 0b1011u; // slots 0, 1, 3
 
-            var added = AdvanceBitOperations.TrySet(mask, 1, out var rest);
+            var added = AdvanceBitOperations.TrySet(ref mask, 1);
 
             Assert.False(added);
-            Assert.Equal(0b1011u, rest);
+            Assert.Equal(0b1011u, mask);
         }
 
         [Fact]
         public void EmptyMask_SetsSingleSlot()
         {
-            var added = AdvanceBitOperations.TrySet(0, 31, out var rest);
+            var mask = 0u;
+
+            var added = AdvanceBitOperations.TrySet(ref mask, 31);
 
             Assert.True(added);
-            Assert.Equal(1u << 31, rest);
+            Assert.Equal(1u << 31, mask);
         }
 
         [Theory]
@@ -44,7 +46,9 @@ public static partial class AdvanceBitOperationsTests
         [InlineData(0x8000_0000u, 0, true, 0x8000_0001u)]
         public void WithVariousMasksAndIndices_SetsAndReportsAdded(uint mask, int index, bool expectedAdded, uint expectedMask)
         {
-            var added = AdvanceBitOperations.TrySet(mask, index, out var rest);
+            var rest = mask;
+
+            var added = AdvanceBitOperations.TrySet(ref rest, index);
 
             Assert.Equal(expectedAdded, added);
             Assert.Equal(expectedMask, rest);
@@ -55,7 +59,9 @@ public static partial class AdvanceBitOperationsTests
         [InlineData(32)]
         public void WithInvalidIndex_ThrowsArgumentOutOfRangeException(int invalid)
         {
-            Assert.Throws<ArgumentOutOfRangeException>(() => AdvanceBitOperations.TrySet(1, invalid, out _));
+            var mask = 1u;
+
+            Assert.Throws<ArgumentOutOfRangeException>(() => AdvanceBitOperations.TrySet(ref mask, invalid));
         }
     }
 }
