@@ -38,9 +38,9 @@ All methods are `static`. Slot indices are validated in **0..31** (ranges in **0
 | `bool TryPop(uint mask, out int index, out uint rest)` | Removes the lowest-indexed set slot (hot path, no rotation). |
 | `bool TryPop(uint mask, out int index, out uint rest, int offset)` | Same, but scans cyclically from `offset` (queue semantics: `offset` sets where collection starts). |
 | `bool TryUnset(uint mask, int index, out uint rest)` | Removes a slot when it is set; `true` when it was present. |
-| `uint Unset(uint mask, int index)` | Removes a slot idempotently and returns the resulting mask. |
+| `void Unset(uint mask, int index, out uint rest)` | Removes a slot idempotently, the resulting mask is returned in `rest`. |
 | `bool TrySet(uint mask, int index, out uint rest)` | Sets a slot when it is not already set; `true` when it was added. |
-| `uint Set(uint mask, int index)` | Sets a slot idempotently and returns the resulting mask. |
+| `void Set(uint mask, int index, out uint rest)` | Sets a slot idempotently, the resulting mask is returned in `rest`. |
 
 ## Example: consuming slots one by one
 

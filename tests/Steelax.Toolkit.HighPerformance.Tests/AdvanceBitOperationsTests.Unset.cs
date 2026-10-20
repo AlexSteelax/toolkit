@@ -13,7 +13,9 @@ public static partial class AdvanceBitOperationsTests
         [InlineData(uint.MaxValue, 31, 0x7FFF_FFFFu)]
         public void WithVariousMasksAndIndices_UnsetsSlot(uint mask, int index, uint expected)
         {
-            Assert.Equal(expected, AdvanceBitOperations.Unset(mask, index));
+            AdvanceBitOperations.Unset(mask, index, out var rest);
+
+            Assert.Equal(expected, rest);
         }
 
         [Theory]
@@ -21,7 +23,7 @@ public static partial class AdvanceBitOperationsTests
         [InlineData(32)]
         public void WithInvalidIndex_ThrowsArgumentOutOfRangeException(int invalid)
         {
-            Assert.Throws<ArgumentOutOfRangeException>(() => AdvanceBitOperations.Unset(1, invalid));
+            Assert.Throws<ArgumentOutOfRangeException>(() => AdvanceBitOperations.Unset(1, invalid, out _));
         }
     }
 }

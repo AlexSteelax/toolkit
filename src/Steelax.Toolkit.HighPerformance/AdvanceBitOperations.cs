@@ -167,18 +167,18 @@ public static class AdvanceBitOperations
         return removed;
     }
 
-    /// <summary>Removes the specified slot (idempotently), returning the resulting mask.</summary>
+    /// <summary>Removes the specified slot (idempotently).</summary>
     /// <param name="mask">The mask to remove from.</param>
     /// <param name="index">The slot index (0..31) to remove.</param>
-    /// <returns>The mask with the slot cleared.</returns>
+    /// <param name="rest">The resulting mask with the slot cleared.</param>
     /// <exception cref="ArgumentOutOfRangeException"><paramref name="index"/> is outside 0..31.</exception>
     [PublicAPI]
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static uint Unset(uint mask, int index)
+    public static void Unset(uint mask, int index, out uint rest)
     {
         ThrowIfInvalidSlot(index);
 
-        return mask & ~(1u << index);
+        rest = mask & ~(1u << index);
     }
 
     /// <summary>Sets the specified slot when it is not already set.</summary>
@@ -203,17 +203,17 @@ public static class AdvanceBitOperations
         return added;
     }
 
-    /// <summary>Sets the specified slot (idempotently), returning the resulting mask.</summary>
+    /// <summary>Sets the specified slot (idempotently).</summary>
     /// <param name="mask">The mask to add to.</param>
     /// <param name="index">The slot index (0..31) to set.</param>
-    /// <returns>The mask with the slot set.</returns>
+    /// <param name="rest">The resulting mask with the slot set.</param>
     /// <exception cref="ArgumentOutOfRangeException"><paramref name="index"/> is outside 0..31.</exception>
     [PublicAPI]
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static uint Set(uint mask, int index)
+    public static void Set(uint mask, int index, out uint rest)
     {
         ThrowIfInvalidSlot(index);
 
-        return mask | (1u << index);
+        rest = mask | (1u << index);
     }
 }
