@@ -22,6 +22,24 @@ public static partial class SlotSetTests
         }
 
         [Theory]
+        [InlineData(0b0u)]
+        [InlineData(0b1u)]
+        [InlineData(0b1011u)]
+        [InlineData(0x8000_0000u)]
+        [InlineData(0b1111_1111_1111_1111_1111_1111_1111_1111u)]
+        public void WithBoundaryMaskOrMask_ComposesCorrectly(uint myMask)
+        {
+            // OfBits(0) is the empty mask: the neutral element for OR, so the external
+            // mask must survive unchanged.
+            var fromEmpty = SlotSet.FromMask(SlotSet.OfBits(0).Mask | myMask);
+            Assert.Equal(myMask, fromEmpty.Mask);
+
+            // OfBits(32) is the full mask: the absorbing element for OR.
+            var fromFull = SlotSet.FromMask(SlotSet.OfBits(32).Mask | myMask);
+            Assert.True(fromFull.All);
+        }
+
+        [Theory]
         [InlineData(0)]
         [InlineData(1)]
         [InlineData(3)]

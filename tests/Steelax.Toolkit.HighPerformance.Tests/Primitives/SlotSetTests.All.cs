@@ -6,28 +6,14 @@ public static partial class SlotSetTests
 {
     public sealed class All
     {
-        [Fact]
-        public void FullMask_ReturnsTrue()
+        [Theory]
+        [InlineData(0b0u, false)] // no bits set
+        [InlineData(0b1u, false)] // single bit set
+        [InlineData(0b1111_1111_1111_1111_1111_1111_1111_1110u, false)] // all but one bit set
+        [InlineData(0b1111_1111_1111_1111_1111_1111_1111_1111u, true)] // all bits set
+        public void WithBoundaryMasks_ReturnsCorrectly(uint mask, bool expected)
         {
-            Assert.True(SlotSet.FromMask(uint.MaxValue).All);
-        }
-
-        [Fact]
-        public void EmptyMask_ReturnsFalse()
-        {
-            Assert.False(SlotSet.FromMask(0).All);
-        }
-
-        [Fact]
-        public void SingleBit_ReturnsFalse()
-        {
-            Assert.False(SlotSet.FromMask(1u << 31).All);
-        }
-
-        [Fact]
-        public void AllButOneBit_ReturnsFalse()
-        {
-            Assert.False(SlotSet.FromMask(uint.MaxValue - 1).All);
+            Assert.Equal(expected, SlotSet.FromMask(mask).All);
         }
     }
 }

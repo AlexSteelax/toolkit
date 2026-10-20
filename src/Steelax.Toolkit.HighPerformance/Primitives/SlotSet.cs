@@ -190,6 +190,26 @@ public readonly record struct SlotSet
         return added;
     }
 
+    /// <summary>Returns the set union of two masks.</summary>
+    [PublicAPI]
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static SlotSet operator |(SlotSet left, SlotSet right) => new(left._slots | right._slots);
+
+    /// <summary>Returns the set intersection of two masks.</summary>
+    [PublicAPI]
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static SlotSet operator &(SlotSet left, SlotSet right) => new(left._slots & right._slots);
+
+    /// <summary>Returns the set difference (symmetric) — bits set in exactly one of the two masks.</summary>
+    [PublicAPI]
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static SlotSet operator ^(SlotSet left, SlotSet right) => new(left._slots ^ right._slots);
+
+    /// <summary>Returns the inversion of the mask — every slot <see langword="not"/> set in the source.</summary>
+    [PublicAPI]
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static SlotSet operator ~(SlotSet value) => new(~value._slots);
+
     /// <summary>Returns the raw mask value followed by the set slot indices, e.g. <c>"11[0 1 3]"</c>.</summary>
     [PublicAPI]
     public override string ToString()
