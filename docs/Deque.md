@@ -110,6 +110,6 @@ stack.TryPopLast(out var top); // top = 3
 
 ## See also
 
-- [`SlotSet`](SlotSet.md)
+- [`AdvanceBitOperations`](AdvanceBitOperations.md)
 - [`EventEnumerator<T>`](EventEnumerator.md)
 - [`Conduit<T>`](Conduit.md) — the bounded lock-free SPSC transfer, also based on power-of-two masking

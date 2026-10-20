@@ -15,10 +15,10 @@ public static partial class FanInSlimTests
 
             var slots = source.Take();
 
-            Assert.Equal(0b101u, slots.Mask);
+            Assert.Equal(0b101u, slots);
 
             // Take when empty
-            Assert.False(source.Take().Any);
+            Assert.Equal(0u, source.Take());
         }
     }
 }

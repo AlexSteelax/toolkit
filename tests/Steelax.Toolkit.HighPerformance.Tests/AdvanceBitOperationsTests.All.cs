@@ -1,10 +1,8 @@
-using Steelax.Toolkit.HighPerformance.Primitives;
+namespace Steelax.Toolkit.HighPerformance.Tests;
 
-namespace Steelax.Toolkit.HighPerformance.Tests.Primitives;
-
-public static partial class SlotSetTests
+public static partial class AdvanceBitOperationsTests
 {
-    public sealed class All
+    public sealed class HasAll
     {
         [Theory]
         [InlineData(0b0u, false)] // no bits set
@@ -13,7 +11,7 @@ public static partial class SlotSetTests
         [InlineData(0b1111_1111_1111_1111_1111_1111_1111_1111u, true)] // all bits set
         public void WithBoundaryMasks_ReturnsCorrectly(uint mask, bool expected)
         {
-            Assert.Equal(expected, SlotSet.FromMask(mask).All);
+            Assert.Equal(expected, AdvanceBitOperations.HasAll(mask));
         }
     }
 }

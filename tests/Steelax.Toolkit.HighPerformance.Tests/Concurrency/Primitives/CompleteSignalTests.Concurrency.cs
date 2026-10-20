@@ -1,7 +1,5 @@
 using System.Diagnostics.CodeAnalysis;
 using Steelax.Toolkit.HighPerformance.Concurrency.Primitives;
-using Steelax.Toolkit.HighPerformance.Tests.Concurrency.Collections;
-using Xunit.Sdk;
 
 namespace Steelax.Toolkit.HighPerformance.Tests.Concurrency.Primitives;
 
@@ -200,8 +198,13 @@ public static partial class CompleteSignalTests
             // Kick off the chain; after this the two tasks ping-pong indefinitely.
             csPing.Signal();
 
-            // Let the chain run, then interrupt it from the main test.
-            await Task.Delay(100, TestContext.Current.CancellationToken);
+            // Let the chain spin up before breaking it. A fixed wall-clock delay is race-prone under
+            // parallel test load (the tasks may be starved), so poll the counters instead: once both
+            // have crossed the threshold the chain is provably running and Complete() has real work
+            // to interrupt.
+            var started = SpinWait.SpinUntil(
+                () => Volatile.Read(ref pings) > 1_000 && Volatile.Read(ref pongs) > 1_000,
+                TimeSpan.FromSeconds(5));
 
             csPing.Complete();
             csPong.Complete();
@@ -217,8 +220,7 @@ public static partial class CompleteSignalTests
             }
 
             // The chain must have actually been running before completion broke it.
-            Assert.True(Volatile.Read(ref pings) > 0);
-            Assert.True(Volatile.Read(ref pongs) > 0);
+            Assert.True(started, "Ping-pong chain did not spin up before completion.");
             Assert.True(csPing.IsCompleted);
             Assert.True(csPong.IsCompleted);
         }

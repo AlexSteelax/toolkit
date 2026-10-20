@@ -1,4 +1,5 @@
-﻿using Steelax.Toolkit.HighPerformance.Concurrency.Primitives;
+﻿using System.Numerics;
+using Steelax.Toolkit.HighPerformance.Concurrency.Primitives;
 
 namespace Steelax.Toolkit.HighPerformance.Tests.Concurrency.Primitives;
 
@@ -17,7 +18,7 @@ public static partial class FanInSlimTests
             source.Signal(4);
 
             await source.WaitToReadyAsync();
-            Assert.True(source.Take().Any);
+            Assert.True(AdvanceBitOperations.HasAny(source.Take()));
 
             // Signal after wait — asynchronous completion
             var waitTask = source.WaitToReadyAsync();
@@ -25,7 +26,7 @@ public static partial class FanInSlimTests
 
             source.Signal(1);
             await waitTask;
-            Assert.True(source.Take().Any);
+            Assert.True(AdvanceBitOperations.HasAny(source.Take()));
         }
 
         [Fact]
@@ -35,15 +36,15 @@ public static partial class FanInSlimTests
 
             source.Signal(0);
             await source.WaitToReadyAsync();
-            Assert.True(source.Take().Any);
+            Assert.True(AdvanceBitOperations.HasAny(source.Take()));
 
             source.Signal(1);
             await source.WaitToReadyAsync();
-            Assert.True(source.Take().Any);
+            Assert.True(AdvanceBitOperations.HasAny(source.Take()));
 
             source.Signal(2);
             await source.WaitToReadyAsync();
-            Assert.True(source.Take().Any);
+            Assert.True(AdvanceBitOperations.HasAny(source.Take()));
         }
 
         [Fact]
@@ -52,14 +53,14 @@ public static partial class FanInSlimTests
             var source = new FanInSlim();
             source.Signal(0);
 
-            Assert.True(source.Take().Any);
+            Assert.True(AdvanceBitOperations.HasAny(source.Take()));
 
             var waitTask = source.WaitToReadyAsync();
             Assert.False(waitTask.IsCompleted);
 
             source.Signal(1);
             await waitTask;
-            Assert.True(source.Take().Any);
+            Assert.True(AdvanceBitOperations.HasAny(source.Take()));
         }
 
         [Fact]
@@ -72,8 +73,8 @@ public static partial class FanInSlimTests
 
             await source.WaitToReadyAsync();
             var slots = source.Take();
-            Assert.True(slots.Any);
-            Assert.Equal(32, slots.Count);
+            Assert.True(AdvanceBitOperations.HasAny(slots));
+            Assert.Equal(32, BitOperations.PopCount(slots));
         }
 
         [Fact]
@@ -86,14 +87,14 @@ public static partial class FanInSlimTests
                 source.Signal(i);
 
             await source.WaitToReadyAsync();
-            Assert.True(source.Take().Any);
+            Assert.True(AdvanceBitOperations.HasAny(source.Take()));
 
             // Sequential signals
             for (var i = 0; i <= 4; i++)
             {
                 source.Signal(i);
                 await source.WaitToReadyAsync();
-                Assert.True(source.Take().Any);
+                Assert.True(AdvanceBitOperations.HasAny(source.Take()));
             }
         }
     }

@@ -1,6 +1,5 @@
 using System.Diagnostics;
 using System.Runtime.InteropServices;
-using BenchmarkDotNet.Attributes;
 using Steelax.Toolkit.HighPerformance.Concurrency.Collections;
 
 namespace Steelax.Toolkit.HighPerformance.Benchmarks;

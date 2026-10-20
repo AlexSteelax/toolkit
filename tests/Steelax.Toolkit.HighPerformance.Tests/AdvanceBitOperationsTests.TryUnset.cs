@@ -1,31 +1,29 @@
-using Steelax.Toolkit.HighPerformance.Primitives;
+namespace Steelax.Toolkit.HighPerformance.Tests;
 
-namespace Steelax.Toolkit.HighPerformance.Tests.Primitives;
-
-public static partial class SlotSetTests
+public static partial class AdvanceBitOperationsTests
 {
-    public sealed class TryRemove
+    public sealed class TryUnset
     {
         [Fact]
         public void SetSlot_RemovesAndReturnsTrue()
         {
-            var set = SlotSet.FromMask(0b1011); // slots 0, 1, 3
+            var mask = 0b1011u; // slots 0, 1, 3
 
-            var removed = set.TryRemove(1, out var rest);
+            var removed = AdvanceBitOperations.TryUnset(mask, 1, out var rest);
 
             Assert.True(removed);
-            Assert.Equal(0b1001u, rest.Mask); // slots 0, 3
+            Assert.Equal(0b1001u, rest); // slots 0, 3
         }
 
         [Fact]
         public void UnsetSlot_ReturnsFalseAndUnchangedRest()
         {
-            var set = SlotSet.FromMask(0b1011); // slots 0, 1, 3
+            var mask = 0b1011u; // slots 0, 1, 3
 
-            var removed = set.TryRemove(2, out var rest);
+            var removed = AdvanceBitOperations.TryUnset(mask, 2, out var rest);
 
             Assert.False(removed);
-            Assert.Equal(0b1011u, rest.Mask);
+            Assert.Equal(0b1011u, rest);
         }
 
         [Theory]
@@ -34,13 +32,13 @@ public static partial class SlotSetTests
         [InlineData(1u, 0, true, 0u)]
         [InlineData(0x8000_0000u, 31, true, 0u)]
         [InlineData(uint.MaxValue, 7, true, 0xFFFF_FF7Fu)]
-        [InlineData(uint.MaxValue, 32 - 1, true, 0x7FFF_FFFFu)]
+        [InlineData(uint.MaxValue, 31, true, 0x7FFF_FFFFu)]
         public void WithVariousMasksAndIndices_RemovesAndReportsRemoved(uint mask, int index, bool expectedRemoved, uint expectedMask)
         {
-            var removed = SlotSet.FromMask(mask).TryRemove(index, out var rest);
+            var removed = AdvanceBitOperations.TryUnset(mask, index, out var rest);
 
             Assert.Equal(expectedRemoved, removed);
-            Assert.Equal(expectedMask, rest.Mask);
+            Assert.Equal(expectedMask, rest);
         }
 
         [Theory]
@@ -48,9 +46,7 @@ public static partial class SlotSetTests
         [InlineData(32)]
         public void WithInvalidIndex_ThrowsArgumentOutOfRangeException(int invalid)
         {
-            var set = SlotSet.FromMask(1);
-
-            Assert.Throws<ArgumentOutOfRangeException>(() => set.TryRemove(invalid, out _));
+            Assert.Throws<ArgumentOutOfRangeException>(() => AdvanceBitOperations.TryUnset(1, invalid, out _));
         }
     }
 }

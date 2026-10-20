@@ -79,4 +79,4 @@ ring.ShrinkFirst();
 
 - [`Deque<T>`](Deque.md) — a fixed-capacity double-ended queue with symmetric end access.
 - [`Conduit<T>`](Conduit.md) — the bounded lock-free SPSC transfer, also based on power-of-two masking.
-- [`SlotSet`](SlotSet.md)
+- [`AdvanceBitOperations`](AdvanceBitOperations.md)

@@ -1,6 +1,4 @@
 using System.Runtime.CompilerServices;
-using System.Threading.Tasks.Sources;
-using Steelax.Toolkit.HighPerformance.Primitives;
 
 namespace Steelax.Toolkit.HighPerformance.Concurrency.Primitives;
 
@@ -76,33 +74,33 @@ public sealed class FanInSlim(bool allowSynchronousContinuations = true) : Compl
 
     /// <summary>Gets and clears the set of ready slots without waiting.</summary>
     /// <returns>
-    /// A <see cref="SlotSet"/> of the slots fired since the last take, or an empty set.
+    /// A bitmask of the slots fired since the last take, or <c>0</c> when nothing is pending. The mask
+    /// is a raw <c>uint</c> — combine or inspect it with
+    /// <see cref="AdvanceBitOperations"/>.
     /// </returns>
     /// <remarks>
     /// Remains usable after <see cref="CompleteSignal.Complete"/> — any slots that were signalled before completion
     /// can still be drained.
     /// </remarks>
     [PublicAPI]
-    public SlotSet Take()
+    public uint Take()
     {
         var ready = Volatile.Read(ref _readyMask);
 
         if (ready == 0)
-            return default;
+            return 0;
 
         // Only clear the bits being returned; concurrent completions are preserved.
         _ = Interlocked.And(ref _readyMask, ~ready);
 
-        return SlotSet.FromMask(ready);
+        return ready;
     }
 
-    /// <summary>
-    /// 
-    /// </summary>
-    /// <returns></returns>
-    public SlotSet Peek()
+    /// <summary>Gets the set of ready slots without clearing them.</summary>
+    /// <returns>A bitmask of the slots fired since the last take, or <c>0</c>.</returns>
+    public uint Peek()
     {
-        return SlotSet.FromMask(Volatile.Read(ref _readyMask));
+        return Volatile.Read(ref _readyMask);
     }
 
     /// <summary>Resets the ready flag of the specified slot, if it was set.</summary>

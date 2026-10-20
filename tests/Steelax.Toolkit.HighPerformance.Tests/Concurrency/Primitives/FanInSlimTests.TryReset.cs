@@ -23,7 +23,7 @@ public static partial class FanInSlimTests
             source.Signal(0);
 
             Assert.False(source.TryTake(2));
-            Assert.True(source.Take().IsSet(0)); // Slot 0 still present
+            Assert.True(AdvanceBitOperations.IsSet(source.Take(), 0)); // Slot 0 still present
         }
 
         [Theory]

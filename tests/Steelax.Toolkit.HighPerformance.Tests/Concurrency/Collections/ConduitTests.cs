@@ -1,6 +1,5 @@
 using JetBrains.Annotations;
 using Steelax.Toolkit.HighPerformance.Concurrency.Collections;
-using Steelax.Toolkit.HighPerformance.Concurrency.Primitives;
 
 namespace Steelax.Toolkit.HighPerformance.Tests.Concurrency.Collections;
 

@@ -1,20 +1,18 @@
-﻿using Steelax.Toolkit.HighPerformance.Primitives;
+namespace Steelax.Toolkit.HighPerformance.Tests;
 
-namespace Steelax.Toolkit.HighPerformance.Tests.Primitives;
-
-public static partial class SlotSetTests
+public static partial class AdvanceBitOperationsTests
 {
     public sealed class IsSet
     {
         [Fact]
         public void ReturnsTrueOnlyForSetSlots()
         {
-            var set = SlotSet.FromMask(0b1011); // slots 0, 1, 3
+            var mask = 0b1011u; // slots 0, 1, 3
 
-            Assert.True(set.IsSet(0));
-            Assert.True(set.IsSet(1));
-            Assert.False(set.IsSet(2));
-            Assert.True(set.IsSet(3));
+            Assert.True(AdvanceBitOperations.IsSet(mask, 0));
+            Assert.True(AdvanceBitOperations.IsSet(mask, 1));
+            Assert.False(AdvanceBitOperations.IsSet(mask, 2));
+            Assert.True(AdvanceBitOperations.IsSet(mask, 3));
         }
 
         [Theory]
@@ -27,7 +25,7 @@ public static partial class SlotSetTests
         [InlineData(uint.MaxValue, 15, true)]
         public void WithVariousMasksAndIndices_ReturnsCorrectly(uint mask, int index, bool expected)
         {
-            Assert.Equal(expected, SlotSet.FromMask(mask).IsSet(index));
+            Assert.Equal(expected, AdvanceBitOperations.IsSet(mask, index));
         }
 
         [Theory]
@@ -35,9 +33,7 @@ public static partial class SlotSetTests
         [InlineData(32)]
         public void WithInvalidIndex_ThrowsArgumentOutOfRangeException(int invalid)
         {
-            var set = SlotSet.FromMask(1);
-
-            Assert.Throws<ArgumentOutOfRangeException>(() => set.IsSet(invalid));
+            Assert.Throws<ArgumentOutOfRangeException>(() => AdvanceBitOperations.IsSet(1, invalid));
         }
     }
 }

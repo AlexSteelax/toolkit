@@ -46,14 +46,14 @@ public static partial class FanInSlimTests
                             await wait;
 
                         var slots = fanIn.Take();
-                        if (slots.Mask == 0)
+                        if (slots == 0)
                             continue;
 
                         Interlocked.Increment(ref iterations);
 
                         for (var slot = 0; slot < producerCount; slot++)
                         {
-                            if (slots.IsSet(slot))
+                            if (AdvanceBitOperations.IsSet(slots, slot))
                                 Interlocked.Increment(ref fired[slot]);
                         }
                     }
@@ -102,7 +102,7 @@ public static partial class FanInSlimTests
                 {
                     var ret = await csReader.WaitAsync();
                     
-                    if (csReader.Take().IsSet(0))
+                    if (AdvanceBitOperations.IsSet(csReader.Take(), 0))
                     {
                         Interlocked.Increment(ref read);
                         csWriter.Signal(0);
@@ -123,7 +123,7 @@ public static partial class FanInSlimTests
 
                     var ret = await csWriter.WaitAsync();
                     
-                    if (csWriter.Take().IsSet(0))
+                    if (AdvanceBitOperations.IsSet(csWriter.Take(), 0))
                         Interlocked.Increment(ref write);
                     
                     if (!ret)

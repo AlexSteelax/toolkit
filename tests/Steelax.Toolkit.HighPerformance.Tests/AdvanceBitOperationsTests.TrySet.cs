@@ -1,42 +1,38 @@
-using Steelax.Toolkit.HighPerformance.Primitives;
+namespace Steelax.Toolkit.HighPerformance.Tests;
 
-namespace Steelax.Toolkit.HighPerformance.Tests.Primitives;
-
-public static partial class SlotSetTests
+public static partial class AdvanceBitOperationsTests
 {
     public sealed class TrySet
     {
         [Fact]
         public void UnsetSlot_SetsAndReturnsTrue()
         {
-            var set = SlotSet.FromMask(0b1011); // slots 0, 1, 3
+            var mask = 0b1011u; // slots 0, 1, 3
 
-            var added = set.TrySet(2, out var rest);
+            var added = AdvanceBitOperations.TrySet(mask, 2, out var rest);
 
             Assert.True(added);
-            Assert.Equal(0b1111u, rest.Mask); // slots 0, 1, 2, 3
+            Assert.Equal(0b1111u, rest); // slots 0, 1, 2, 3
         }
 
         [Fact]
         public void SetSlot_ReturnsFalseAndUnchangedRest()
         {
-            var set = SlotSet.FromMask(0b1011); // slots 0, 1, 3
+            var mask = 0b1011u; // slots 0, 1, 3
 
-            var added = set.TrySet(1, out var rest);
+            var added = AdvanceBitOperations.TrySet(mask, 1, out var rest);
 
             Assert.False(added);
-            Assert.Equal(0b1011u, rest.Mask);
+            Assert.Equal(0b1011u, rest);
         }
 
         [Fact]
-        public void EmptySet_SetsSingleSlot()
+        public void EmptyMask_SetsSingleSlot()
         {
-            var set = SlotSet.FromMask(0);
-
-            var added = set.TrySet(31, out var rest);
+            var added = AdvanceBitOperations.TrySet(0, 31, out var rest);
 
             Assert.True(added);
-            Assert.Equal(1u << 31, rest.Mask);
+            Assert.Equal(1u << 31, rest);
         }
 
         [Theory]
@@ -48,10 +44,10 @@ public static partial class SlotSetTests
         [InlineData(0x8000_0000u, 0, true, 0x8000_0001u)]
         public void WithVariousMasksAndIndices_SetsAndReportsAdded(uint mask, int index, bool expectedAdded, uint expectedMask)
         {
-            var added = SlotSet.FromMask(mask).TrySet(index, out var rest);
+            var added = AdvanceBitOperations.TrySet(mask, index, out var rest);
 
             Assert.Equal(expectedAdded, added);
-            Assert.Equal(expectedMask, rest.Mask);
+            Assert.Equal(expectedMask, rest);
         }
 
         [Theory]
@@ -59,9 +55,7 @@ public static partial class SlotSetTests
         [InlineData(32)]
         public void WithInvalidIndex_ThrowsArgumentOutOfRangeException(int invalid)
         {
-            var set = SlotSet.FromMask(1);
-
-            Assert.Throws<ArgumentOutOfRangeException>(() => set.TrySet(invalid, out _));
+            Assert.Throws<ArgumentOutOfRangeException>(() => AdvanceBitOperations.TrySet(1, invalid, out _));
         }
     }
 }

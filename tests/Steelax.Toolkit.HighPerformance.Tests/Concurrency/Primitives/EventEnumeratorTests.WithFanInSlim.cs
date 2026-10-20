@@ -20,7 +20,7 @@ public static partial class EventEnumeratorTests
             await fanIn.WaitToReadyAsync();
             var slots = fanIn.Take();
 
-            Assert.True(slots.IsSet(slot));
+            Assert.True(AdvanceBitOperations.IsSet(slots, slot));
             Assert.True(adapter.GetState().IsCompletedSuccessfully);
             Assert.Equal(1, adapter.GetResult());
         }
@@ -44,7 +44,7 @@ public static partial class EventEnumeratorTests
             await waitTask.AsTask().WaitAsync(TimeSpan.FromSeconds(5), TestContext.Current.CancellationToken);
 
             var slots = fanIn.Take();
-            Assert.True(slots.IsSet(slot));
+            Assert.True(AdvanceBitOperations.IsSet(slots, slot));
             Assert.True(adapter.GetState().IsCompletedSuccessfully);
             Assert.Equal(7, adapter.GetResult());
         }

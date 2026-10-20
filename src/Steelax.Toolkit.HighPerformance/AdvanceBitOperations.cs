@@ -1,0 +1,219 @@
+using System.Numerics;
+using System.Runtime.CompilerServices;
+
+namespace Steelax.Toolkit.HighPerformance;
+
+/// <summary>
+/// Functional bit-mask operations over the 32 slot indices (0..31) packed into a <c>uint</c>.
+/// </summary>
+/// <remarks>
+/// <para>
+/// A slot mask is a plain <c>uint</c> where each set bit is a slot index. This class provides the
+/// mask algebra that is not already expressed by the native bitwise operators: range masks
+/// (<see cref="OfFirstBits"/>, <see cref="OfLastBits"/>), predicates
+/// (<see cref="HasAny"/>, <see cref="HasAll"/>, <see cref="IsSet"/>) and
+/// single-slot transitions (<c>TryPop</c>, <see cref="Set"/>, <see cref="TrySet"/>,
+/// <see cref="Unset"/>, <see cref="TryUnset"/>).
+/// Composition (<c>|</c>, <c>&amp;</c>, <c>^</c>, <c>~</c>) is left to the native operators.
+/// All operations are pure: masks are passed by value and stateful transitions report their result
+/// through <c>out</c> parameters.
+/// </para>
+/// </remarks>
+[PublicAPI]
+public static class AdvanceBitOperations
+{
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static void ThrowIfInvalidSlot(int index, [CallerArgumentExpression("index")] string? paramName = null)
+    {
+        ArgumentOutOfRangeException.ThrowIfNegative(index, paramName);
+        ArgumentOutOfRangeException.ThrowIfGreaterThanOrEqual(index, sizeof(int) * 8, paramName);
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static void ThrowIfInvalidSize(int size, [CallerArgumentExpression("size")] string? paramName = null)
+    {
+        ArgumentOutOfRangeException.ThrowIfNegative(size, paramName);
+        ArgumentOutOfRangeException.ThrowIfGreaterThan(size, sizeof(int) * 8, paramName);
+    }
+
+    /// <summary>Creates a mask with the first (lowest) <paramref name="count"/> slots set.</summary>
+    /// <param name="count">The number of slots (0..32) to set.</param>
+    /// <exception cref="ArgumentOutOfRangeException"><paramref name="count"/> is outside 0..32.</exception>
+    [PublicAPI]
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static uint OfFirstBits(int count)
+    {
+        ThrowIfInvalidSize(count);
+
+        // 1u << 32 wraps to 1, so the all-32-bits case must be handled explicitly.
+        return count == 32 ? uint.MaxValue : (1u << count) - 1;
+    }
+
+    /// <summary>Creates a mask with the last (highest) <paramref name="count"/> slots set.</summary>
+    /// <param name="count">The number of slots (0..32) to set.</param>
+    /// <exception cref="ArgumentOutOfRangeException"><paramref name="count"/> is outside 0..32.</exception>
+    [PublicAPI]
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static uint OfLastBits(int count)
+    {
+        ThrowIfInvalidSize(count);
+
+        // 1u << 32 wraps to 1, so the no-bits case must be handled explicitly.
+        return count == 0 ? 0u : ~((1u << (32 - count)) - 1);
+    }
+
+    /// <summary>Determines whether at least one slot is set in the mask.</summary>
+    [PublicAPI]
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static bool HasAny(uint mask)
+        => mask != 0;
+
+    /// <summary>Determines whether all 32 slots are set in the mask.</summary>
+    [PublicAPI]
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static bool HasAll(uint mask)
+        => mask == uint.MaxValue;
+
+    /// <summary>Determines whether the specified slot is set in the mask.</summary>
+    /// <param name="mask">The mask to test.</param>
+    /// <param name="index">The slot index (0..31) to test.</param>
+    /// <exception cref="ArgumentOutOfRangeException"><paramref name="index"/> is outside 0..31.</exception>
+    [PublicAPI]
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static bool IsSet(uint mask, int index)
+    {
+        ThrowIfInvalidSlot(index);
+
+        return (mask & (1u << index)) != 0;
+    }
+
+    /// <summary>Removes and returns the lowest-indexed set slot (hot path, no rotation).</summary>
+    /// <param name="mask">The mask to pop from.</param>
+    /// <param name="index">The removed slot index (only meaningful when the method returns <see langword="true"/>).</param>
+    /// <param name="rest">The remaining mask with the popped bit cleared.</param>
+    /// <returns><see langword="true"/> when a slot was removed; otherwise, <see langword="false"/>.</returns>
+    [PublicAPI]
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static bool TryPop(uint mask, out int index, out uint rest)
+    {
+        if (mask == 0)
+        {
+            rest = mask;
+            index = 0;
+            return false;
+        }
+
+        index = BitOperations.TrailingZeroCount(mask);
+        rest = mask & (mask - 1);
+
+        return true;
+    }
+
+    /// <summary>
+    /// Removes and returns the lowest-indexed set slot at or after an offset, scanning the mask
+    /// cyclically — queue semantics. <paramref name="offset"/> sets where collection starts, so
+    /// successive pops with a stable offset return
+    /// <c>offset, offset+1, ..., 31, 0, ..., offset-1</c>.
+    /// </summary>
+    /// <param name="mask">The mask to pop from.</param>
+    /// <param name="index">The removed slot index (only meaningful when the method returns <see langword="true"/>).</param>
+    /// <param name="rest">The remaining mask with the popped bit cleared.</param>
+    /// <param name="offset">
+    /// The slot index (0..31) at which the scan begins; <c>0</c> behaves like the plain overload.
+    /// </param>
+    /// <returns><see langword="true"/> when a slot was removed; otherwise, <see langword="false"/>.</returns>
+    /// <exception cref="ArgumentOutOfRangeException"><paramref name="offset"/> is outside 0..31.</exception>
+    [PublicAPI]
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static bool TryPop(uint mask, out int index, out uint rest, int offset)
+    {
+        ThrowIfInvalidSlot(offset);
+
+        if (mask == 0)
+        {
+            rest = mask;
+            index = 0;
+            return false;
+        }
+
+        // Rotate so the scan begins at `offset`, find the lowest set slot, and map it back.
+        // RotateRight compiles to a single rol/ror on supported ISAs.
+        var rotated = BitOperations.RotateRight(mask, offset);
+        index = (BitOperations.TrailingZeroCount(rotated) + offset) & 31;
+        rest = mask & ~(1u << index);
+
+        return true;
+    }
+
+    /// <summary>Removes the specified slot when it is set.</summary>
+    /// <param name="mask">The mask to remove from.</param>
+    /// <param name="index">The slot index (0..31) to remove.</param>
+    /// <param name="rest">
+    /// The resulting mask with the slot removed, or the original mask when the slot was not present.
+    /// </param>
+    /// <returns><see langword="true"/> when the slot was present and removed; otherwise, <see langword="false"/>.</returns>
+    /// <exception cref="ArgumentOutOfRangeException"><paramref name="index"/> is outside 0..31.</exception>
+    [PublicAPI]
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static bool TryUnset(uint mask, int index, out uint rest)
+    {
+        ThrowIfInvalidSlot(index);
+
+        var bit = 1u << index;
+        var removed = (mask & bit) != 0;
+
+        rest = mask & ~bit;
+
+        return removed;
+    }
+
+    /// <summary>Removes the specified slot (idempotently), returning the resulting mask.</summary>
+    /// <param name="mask">The mask to remove from.</param>
+    /// <param name="index">The slot index (0..31) to remove.</param>
+    /// <returns>The mask with the slot cleared.</returns>
+    /// <exception cref="ArgumentOutOfRangeException"><paramref name="index"/> is outside 0..31.</exception>
+    [PublicAPI]
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static uint Unset(uint mask, int index)
+    {
+        ThrowIfInvalidSlot(index);
+
+        return mask & ~(1u << index);
+    }
+
+    /// <summary>Sets the specified slot when it is not already set.</summary>
+    /// <param name="mask">The mask to add to.</param>
+    /// <param name="index">The slot index (0..31) to set.</param>
+    /// <param name="rest">
+    /// The resulting mask with the slot set, or the original mask when the slot was already present.
+    /// </param>
+    /// <returns><see langword="true"/> when the slot was absent and is now set; otherwise, <see langword="false"/>.</returns>
+    /// <exception cref="ArgumentOutOfRangeException"><paramref name="index"/> is outside 0..31.</exception>
+    [PublicAPI]
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static bool TrySet(uint mask, int index, out uint rest)
+    {
+        ThrowIfInvalidSlot(index);
+
+        var bit = 1u << index;
+        var added = (mask & bit) == 0;
+
+        rest = mask | bit;
+
+        return added;
+    }
+
+    /// <summary>Sets the specified slot (idempotently), returning the resulting mask.</summary>
+    /// <param name="mask">The mask to add to.</param>
+    /// <param name="index">The slot index (0..31) to set.</param>
+    /// <returns>The mask with the slot set.</returns>
+    /// <exception cref="ArgumentOutOfRangeException"><paramref name="index"/> is outside 0..31.</exception>
+    [PublicAPI]
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static uint Set(uint mask, int index)
+    {
+        ThrowIfInvalidSlot(index);
+
+        return mask | (1u << index);
+    }
+}

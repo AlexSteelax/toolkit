@@ -15,7 +15,7 @@ public static partial class FanInSlimTests
             callback.Fire();
 
             var slots = source.Take();
-            Assert.True(slots.IsSet(3));
+            Assert.True(AdvanceBitOperations.IsSet(slots, 3));
         }
 
         [Fact]
@@ -27,7 +27,7 @@ public static partial class FanInSlimTests
             callback.Handler();
 
             var slots = source.Take();
-            Assert.True(slots.IsSet(2));
+            Assert.True(AdvanceBitOperations.IsSet(slots, 2));
         }
 
         [Fact]

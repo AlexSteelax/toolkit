@@ -20,7 +20,7 @@ public static partial class FanInSlimTests
             var wait = source.WaitAsync();
             Assert.True(wait.IsCompleted);
             Assert.True(await wait);
-            Assert.True(source.Take().IsSet(3));
+            Assert.True(AdvanceBitOperations.IsSet(source.Take(), 3));
         }
 
         [Fact]
@@ -34,7 +34,7 @@ public static partial class FanInSlimTests
             source.Signal(4);
 
             Assert.True(await wait);
-            Assert.True(source.Take().IsSet(4));
+            Assert.True(AdvanceBitOperations.IsSet(source.Take(), 4));
         }
 
         [Fact]
@@ -70,7 +70,7 @@ public static partial class FanInSlimTests
 
             // Completion dominates the wait outcome; the leftover slot is still drainable via Take.
             Assert.False(await source.WaitAsync());
-            Assert.True(source.Take().IsSet(1));
+            Assert.True(AdvanceBitOperations.IsSet(source.Take(), 1));
         }
 
         [Fact]
@@ -81,7 +81,7 @@ public static partial class FanInSlimTests
             source.Signal(2); // ignored after completion
 
             Assert.False(await source.WaitAsync());
-            Assert.False(source.Take().Any);
+            Assert.False(AdvanceBitOperations.HasAny(source.Take()));
         }
 
         [Fact]
@@ -93,8 +93,8 @@ public static partial class FanInSlimTests
             source.Signal(5); // ignored: completion already latched
 
             var slots = source.Take();
-            Assert.True(slots.IsSet(0));
-            Assert.False(slots.IsSet(5));
+            Assert.True(AdvanceBitOperations.IsSet(slots, 0));
+            Assert.False(AdvanceBitOperations.IsSet(slots, 5));
             Assert.False(await source.WaitAsync());
         }
 
@@ -107,7 +107,7 @@ public static partial class FanInSlimTests
 
             // Completed first: no event is reported, even though the mask holds an un-drained slot.
             Assert.False(await source.WaitAsync());
-            Assert.True(source.Take().IsSet(7));
+            Assert.True(AdvanceBitOperations.IsSet(source.Take(), 7));
 
             Assert.False(await source.WaitAsync()); // still completed → false
         }
@@ -153,7 +153,7 @@ public static partial class FanInSlimTests
 
             source.GetSignalCallback(9).Fire();
 
-            Assert.False(source.Take().Any);
+            Assert.False(AdvanceBitOperations.HasAny(source.Take()));
         }
 
         [Fact(Timeout = 10_000)]
