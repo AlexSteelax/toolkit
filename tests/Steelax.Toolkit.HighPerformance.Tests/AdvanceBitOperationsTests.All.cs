@@ -2,7 +2,7 @@ namespace Steelax.Toolkit.HighPerformance.Tests;
 
 public static partial class AdvanceBitOperationsTests
 {
-    public sealed class HasAll
+    public sealed class HasAllBits
     {
         [Theory]
         [InlineData(0b0u, false)] // no bits set
@@ -11,7 +11,7 @@ public static partial class AdvanceBitOperationsTests
         [InlineData(0b1111_1111_1111_1111_1111_1111_1111_1111u, true)] // all bits set
         public void WithBoundaryMasks_ReturnsCorrectly(uint mask, bool expected)
         {
-            Assert.Equal(expected, AdvanceBitOperations.HasAll(mask));
+            Assert.Equal(expected, AdvanceBitOperations.HasAllBits(mask));
         }
     }
 }

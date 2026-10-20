@@ -2,14 +2,14 @@ namespace Steelax.Toolkit.HighPerformance.Tests;
 
 public static partial class AdvanceBitOperationsTests
 {
-    public sealed class TryPop
+    public sealed class TryPopBit
     {
         [Fact]
         public void SingleBit_ReturnsSlotAndClearsMask()
         {
             var mask = 4u; // slot 2
 
-            var removed = AdvanceBitOperations.TryPop(ref mask, out var index);
+            var removed = AdvanceBitOperations.TryPopBit(ref mask, out var index);
 
             Assert.True(removed);
             Assert.Equal(2, index);
@@ -21,16 +21,16 @@ public static partial class AdvanceBitOperationsTests
         {
             var mask = 0b10101u; // slots 0, 2, 4
 
-            Assert.True(AdvanceBitOperations.TryPop(ref mask, out var i0));
+            Assert.True(AdvanceBitOperations.TryPopBit(ref mask, out var i0));
             Assert.Equal(0, i0);
 
-            Assert.True(AdvanceBitOperations.TryPop(ref mask, out var i2));
+            Assert.True(AdvanceBitOperations.TryPopBit(ref mask, out var i2));
             Assert.Equal(2, i2);
 
-            Assert.True(AdvanceBitOperations.TryPop(ref mask, out var i4));
+            Assert.True(AdvanceBitOperations.TryPopBit(ref mask, out var i4));
             Assert.Equal(4, i4);
 
-            Assert.False(AdvanceBitOperations.HasAny(mask));
+            Assert.False(AdvanceBitOperations.HasAnyBits(mask));
         }
 
         [Fact]
@@ -38,7 +38,7 @@ public static partial class AdvanceBitOperationsTests
         {
             var mask = 0u;
 
-            var removed = AdvanceBitOperations.TryPop(ref mask, out _);
+            var removed = AdvanceBitOperations.TryPopBit(ref mask, out _);
 
             Assert.False(removed);
             Assert.Equal(0u, mask);
@@ -51,11 +51,11 @@ public static partial class AdvanceBitOperationsTests
 
             for (var expected = 0; expected < 4; expected++)
             {
-                Assert.True(AdvanceBitOperations.TryPop(ref mask, out var actual));
+                Assert.True(AdvanceBitOperations.TryPopBit(ref mask, out var actual));
                 Assert.Equal(expected, actual);
             }
 
-            Assert.False(AdvanceBitOperations.TryPop(ref mask, out _));
+            Assert.False(AdvanceBitOperations.TryPopBit(ref mask, out _));
         }
 
         [Fact]
@@ -63,16 +63,16 @@ public static partial class AdvanceBitOperationsTests
         {
             var mask = 0b111u; // slots 0, 1, 2
 
-            Assert.True(AdvanceBitOperations.TryPop(ref mask, out var first, 2));
+            Assert.True(AdvanceBitOperations.TryPopBit(ref mask, out var first, 2));
             Assert.Equal(2, first);
 
-            Assert.True(AdvanceBitOperations.TryPop(ref mask, out var second, 2));
+            Assert.True(AdvanceBitOperations.TryPopBit(ref mask, out var second, 2));
             Assert.Equal(0, second);
 
-            Assert.True(AdvanceBitOperations.TryPop(ref mask, out var third, 2));
+            Assert.True(AdvanceBitOperations.TryPopBit(ref mask, out var third, 2));
             Assert.Equal(1, third);
 
-            Assert.False(AdvanceBitOperations.HasAny(mask));
+            Assert.False(AdvanceBitOperations.HasAnyBits(mask));
         }
 
         [Fact]
@@ -80,7 +80,7 @@ public static partial class AdvanceBitOperationsTests
         {
             var mask = 0b10100u; // slots 2, 4
 
-            Assert.True(AdvanceBitOperations.TryPop(ref mask, out var index, 1));
+            Assert.True(AdvanceBitOperations.TryPopBit(ref mask, out var index, 1));
 
             Assert.Equal(2, index);
             Assert.Equal(0b10000u, mask); // slot 4
@@ -91,10 +91,10 @@ public static partial class AdvanceBitOperationsTests
         {
             var mask = 0b1000001u; // slots 0, 6
 
-            Assert.True(AdvanceBitOperations.TryPop(ref mask, out var top, 6));
+            Assert.True(AdvanceBitOperations.TryPopBit(ref mask, out var top, 6));
             Assert.Equal(6, top);
 
-            Assert.True(AdvanceBitOperations.TryPop(ref mask, out var wrapped, 6));
+            Assert.True(AdvanceBitOperations.TryPopBit(ref mask, out var wrapped, 6));
             Assert.Equal(0, wrapped);
         }
 
@@ -103,13 +103,13 @@ public static partial class AdvanceBitOperationsTests
         {
             var mask = 0b1010u; // slots 1, 3
 
-            Assert.True(AdvanceBitOperations.TryPop(ref mask, out var first, 0));
+            Assert.True(AdvanceBitOperations.TryPopBit(ref mask, out var first, 0));
             Assert.Equal(1, first);
 
-            Assert.True(AdvanceBitOperations.TryPop(ref mask, out var second, 0));
+            Assert.True(AdvanceBitOperations.TryPopBit(ref mask, out var second, 0));
             Assert.Equal(3, second);
 
-            Assert.False(AdvanceBitOperations.HasAny(mask));
+            Assert.False(AdvanceBitOperations.HasAnyBits(mask));
         }
 
         [Theory]
@@ -125,7 +125,7 @@ public static partial class AdvanceBitOperationsTests
         {
             var rest = mask;
 
-            var removed = AdvanceBitOperations.TryPop(ref rest, out var index, offset);
+            var removed = AdvanceBitOperations.TryPopBit(ref rest, out var index, offset);
 
             Assert.True(removed);
             Assert.Equal(expectedIndex, index);
@@ -139,7 +139,7 @@ public static partial class AdvanceBitOperationsTests
         {
             var mask = 1u;
 
-            Assert.Throws<ArgumentOutOfRangeException>(() => AdvanceBitOperations.TryPop(ref mask, out _, invalid));
+            Assert.Throws<ArgumentOutOfRangeException>(() => AdvanceBitOperations.TryPopBit(ref mask, out _, invalid));
         }
     }
 }

@@ -11,9 +11,9 @@ namespace Steelax.Toolkit.HighPerformance;
 /// A slot mask is a plain <c>uint</c> where each set bit is a slot index. This class provides the
 /// mask algebra that is not already expressed by the native bitwise operators: range masks
 /// (<see cref="OfFirstBits"/>, <see cref="OfLastBits"/>), predicates
-/// (<see cref="HasAny"/>, <see cref="HasAll"/>, <see cref="IsSet"/>) and
-/// single-slot transitions (<c>TryPop</c>, <see cref="Set"/>, <see cref="TrySet"/>,
-/// <see cref="Unset"/>, <see cref="TryUnset"/>).
+/// (<see cref="HasAnyBits"/>, <see cref="HasAllBits"/>, <see cref="IsBitSet"/>) and
+/// single-slot transitions (<c>TryPopBit</c>, <see cref="SetBit"/>, <see cref="TrySetBit"/>,
+/// <see cref="UnsetBit"/>, <see cref="TryUnsetBit"/>).
 /// Composition (<c>|</c>, <c>&amp;</c>, <c>^</c>, <c>~</c>) is left to the native operators.
 /// Queries and factories are pure; single-slot transitions mutate the mask in place via <c>ref</c>.
 /// </para>
@@ -64,13 +64,13 @@ public static class AdvanceBitOperations
     /// <summary>Determines whether at least one slot is set in the mask.</summary>
     [PublicAPI]
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static bool HasAny(uint mask)
+    public static bool HasAnyBits(uint mask)
         => mask != 0;
 
     /// <summary>Determines whether all 32 slots are set in the mask.</summary>
     [PublicAPI]
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static bool HasAll(uint mask)
+    public static bool HasAllBits(uint mask)
         => mask == uint.MaxValue;
 
     /// <summary>Determines whether the specified slot is set in the mask.</summary>
@@ -79,7 +79,7 @@ public static class AdvanceBitOperations
     /// <exception cref="ArgumentOutOfRangeException"><paramref name="index"/> is outside 0..31.</exception>
     [PublicAPI]
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static bool IsSet(uint mask, int index)
+    public static bool IsBitSet(uint mask, int index)
     {
         ThrowIfInvalidSlot(index);
 
@@ -92,7 +92,7 @@ public static class AdvanceBitOperations
     /// <returns><see langword="true"/> when a slot was removed; otherwise, <see langword="false"/>.</returns>
     [PublicAPI]
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static bool TryPop(ref uint mask, out int index)
+    public static bool TryPopBit(ref uint mask, out int index)
     {
         if (mask == 0)
         {
@@ -121,7 +121,7 @@ public static class AdvanceBitOperations
     /// <exception cref="ArgumentOutOfRangeException"><paramref name="offset"/> is outside 0..31.</exception>
     [PublicAPI]
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static bool TryPop(ref uint mask, out int index, int offset)
+    public static bool TryPopBit(ref uint mask, out int index, int offset)
     {
         ThrowIfInvalidSlot(offset);
 
@@ -147,7 +147,7 @@ public static class AdvanceBitOperations
     /// <exception cref="ArgumentOutOfRangeException"><paramref name="index"/> is outside 0..31.</exception>
     [PublicAPI]
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static bool TryUnset(ref uint mask, int index)
+    public static bool TryUnsetBit(ref uint mask, int index)
     {
         ThrowIfInvalidSlot(index);
 
@@ -165,7 +165,7 @@ public static class AdvanceBitOperations
     /// <exception cref="ArgumentOutOfRangeException"><paramref name="index"/> is outside 0..31.</exception>
     [PublicAPI]
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static void Unset(ref uint mask, int index)
+    public static void UnsetBit(ref uint mask, int index)
     {
         ThrowIfInvalidSlot(index);
 
@@ -179,7 +179,7 @@ public static class AdvanceBitOperations
     /// <exception cref="ArgumentOutOfRangeException"><paramref name="index"/> is outside 0..31.</exception>
     [PublicAPI]
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static bool TrySet(ref uint mask, int index)
+    public static bool TrySetBit(ref uint mask, int index)
     {
         ThrowIfInvalidSlot(index);
 
@@ -197,7 +197,7 @@ public static class AdvanceBitOperations
     /// <exception cref="ArgumentOutOfRangeException"><paramref name="index"/> is outside 0..31.</exception>
     [PublicAPI]
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static void Set(ref uint mask, int index)
+    public static void SetBit(ref uint mask, int index)
     {
         ThrowIfInvalidSlot(index);
 

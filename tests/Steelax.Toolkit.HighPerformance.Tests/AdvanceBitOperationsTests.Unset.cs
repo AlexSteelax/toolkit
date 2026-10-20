@@ -2,7 +2,7 @@ namespace Steelax.Toolkit.HighPerformance.Tests;
 
 public static partial class AdvanceBitOperationsTests
 {
-    public sealed class Unset
+    public sealed class UnsetBit
     {
         [Theory]
         [InlineData(0b1011u, 1, 0b1001u)]
@@ -15,7 +15,7 @@ public static partial class AdvanceBitOperationsTests
         {
             var rest = mask;
 
-            AdvanceBitOperations.Unset(ref rest, index);
+            AdvanceBitOperations.UnsetBit(ref rest, index);
 
             Assert.Equal(expected, rest);
         }
@@ -27,7 +27,7 @@ public static partial class AdvanceBitOperationsTests
         {
             var mask = 1u;
 
-            Assert.Throws<ArgumentOutOfRangeException>(() => AdvanceBitOperations.Unset(ref mask, invalid));
+            Assert.Throws<ArgumentOutOfRangeException>(() => AdvanceBitOperations.UnsetBit(ref mask, invalid));
         }
     }
 }

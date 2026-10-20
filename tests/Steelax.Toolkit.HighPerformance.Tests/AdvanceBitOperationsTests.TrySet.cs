@@ -2,14 +2,14 @@ namespace Steelax.Toolkit.HighPerformance.Tests;
 
 public static partial class AdvanceBitOperationsTests
 {
-    public sealed class TrySet
+    public sealed class TrySetBit
     {
         [Fact]
         public void UnsetSlot_SetsAndReturnsTrue()
         {
             var mask = 0b1011u; // slots 0, 1, 3
 
-            var added = AdvanceBitOperations.TrySet(ref mask, 2);
+            var added = AdvanceBitOperations.TrySetBit(ref mask, 2);
 
             Assert.True(added);
             Assert.Equal(0b1111u, mask); // slots 0, 1, 2, 3
@@ -20,7 +20,7 @@ public static partial class AdvanceBitOperationsTests
         {
             var mask = 0b1011u; // slots 0, 1, 3
 
-            var added = AdvanceBitOperations.TrySet(ref mask, 1);
+            var added = AdvanceBitOperations.TrySetBit(ref mask, 1);
 
             Assert.False(added);
             Assert.Equal(0b1011u, mask);
@@ -31,7 +31,7 @@ public static partial class AdvanceBitOperationsTests
         {
             var mask = 0u;
 
-            var added = AdvanceBitOperations.TrySet(ref mask, 31);
+            var added = AdvanceBitOperations.TrySetBit(ref mask, 31);
 
             Assert.True(added);
             Assert.Equal(1u << 31, mask);
@@ -48,7 +48,7 @@ public static partial class AdvanceBitOperationsTests
         {
             var rest = mask;
 
-            var added = AdvanceBitOperations.TrySet(ref rest, index);
+            var added = AdvanceBitOperations.TrySetBit(ref rest, index);
 
             Assert.Equal(expectedAdded, added);
             Assert.Equal(expectedMask, rest);
@@ -61,7 +61,7 @@ public static partial class AdvanceBitOperationsTests
         {
             var mask = 1u;
 
-            Assert.Throws<ArgumentOutOfRangeException>(() => AdvanceBitOperations.TrySet(ref mask, invalid));
+            Assert.Throws<ArgumentOutOfRangeException>(() => AdvanceBitOperations.TrySetBit(ref mask, invalid));
         }
     }
 }

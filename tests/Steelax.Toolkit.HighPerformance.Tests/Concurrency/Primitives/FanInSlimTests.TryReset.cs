@@ -1,4 +1,4 @@
-﻿using Steelax.Toolkit.HighPerformance.Concurrency.Primitives;
+using Steelax.Toolkit.HighPerformance.Concurrency.Primitives;
 
 namespace Steelax.Toolkit.HighPerformance.Tests.Concurrency.Primitives;
 
@@ -23,7 +23,7 @@ public static partial class FanInSlimTests
             source.Signal(0);
 
             Assert.False(source.TryTake(2));
-            Assert.True(AdvanceBitOperations.IsSet(source.Take(), 0)); // Slot 0 still present
+            Assert.True(AdvanceBitOperations.IsBitSet(source.Take(), 0)); // Slot 0 still present
         }
 
         [Theory]

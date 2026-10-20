@@ -2,17 +2,17 @@ namespace Steelax.Toolkit.HighPerformance.Tests;
 
 public static partial class AdvanceBitOperationsTests
 {
-    public sealed class IsSet
+    public sealed class IsBitSet
     {
         [Fact]
         public void ReturnsTrueOnlyForSetSlots()
         {
             var mask = 0b1011u; // slots 0, 1, 3
 
-            Assert.True(AdvanceBitOperations.IsSet(mask, 0));
-            Assert.True(AdvanceBitOperations.IsSet(mask, 1));
-            Assert.False(AdvanceBitOperations.IsSet(mask, 2));
-            Assert.True(AdvanceBitOperations.IsSet(mask, 3));
+            Assert.True(AdvanceBitOperations.IsBitSet(mask, 0));
+            Assert.True(AdvanceBitOperations.IsBitSet(mask, 1));
+            Assert.False(AdvanceBitOperations.IsBitSet(mask, 2));
+            Assert.True(AdvanceBitOperations.IsBitSet(mask, 3));
         }
 
         [Theory]
@@ -25,7 +25,7 @@ public static partial class AdvanceBitOperationsTests
         [InlineData(uint.MaxValue, 15, true)]
         public void WithVariousMasksAndIndices_ReturnsCorrectly(uint mask, int index, bool expected)
         {
-            Assert.Equal(expected, AdvanceBitOperations.IsSet(mask, index));
+            Assert.Equal(expected, AdvanceBitOperations.IsBitSet(mask, index));
         }
 
         [Theory]
@@ -33,7 +33,7 @@ public static partial class AdvanceBitOperationsTests
         [InlineData(32)]
         public void WithInvalidIndex_ThrowsArgumentOutOfRangeException(int invalid)
         {
-            Assert.Throws<ArgumentOutOfRangeException>(() => AdvanceBitOperations.IsSet(1, invalid));
+            Assert.Throws<ArgumentOutOfRangeException>(() => AdvanceBitOperations.IsBitSet(1, invalid));
         }
     }
 }

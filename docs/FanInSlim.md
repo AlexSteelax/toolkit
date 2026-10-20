@@ -28,7 +28,7 @@ fanIn.Signal(2);
 await fanIn.WaitAsync();          // completes synchronously here
 
 var ready = fanIn.Take();         // uint mask 0b101 { 0, 2 } — gets and clears ready slots
-if (AdvanceBitOperations.IsSet(ready, 0))
+if (AdvanceBitOperations.IsBitSet(ready, 0))
 {
     // handle source 0
 }
@@ -64,7 +64,7 @@ fanIn.Complete();       // terminal: completion dominates, no further Signal() i
 
 await fanIn.WaitToReadyAsync();   // false — completed, even though slot 2 is still un-drained
 
-AdvanceBitOperations.IsSet(fanIn.Take(), 2); // true — leftovers before completion are still drainable
+AdvanceBitOperations.IsBitSet(fanIn.Take(), 2); // true — leftovers before completion are still drainable
 ```
 
 ## Example: signal-before-wait and signal-after-wait
@@ -77,7 +77,7 @@ source.Signal(0);
 source.Signal(2);
 source.Signal(4);
 await source.WaitAsync();
-Assert.True(AdvanceBitOperations.HasAny(source.Take()));
+Assert.True(AdvanceBitOperations.HasAnyBits(source.Take()));
 
 // Signal after wait — asynchronous completion:
 var waitTask = source.WaitAsync();
@@ -85,7 +85,7 @@ Assert.False(waitTask.IsCompleted);
 
 source.Signal(1);
 await waitTask;
-Assert.True(AdvanceBitOperations.HasAny(source.Take()));
+Assert.True(AdvanceBitOperations.HasAnyBits(source.Take()));
 ```
 
 ## Example: all 32 slots

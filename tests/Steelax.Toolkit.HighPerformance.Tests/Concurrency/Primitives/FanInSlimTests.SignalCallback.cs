@@ -1,4 +1,4 @@
-﻿using Steelax.Toolkit.HighPerformance.Concurrency.Primitives;
+using Steelax.Toolkit.HighPerformance.Concurrency.Primitives;
 
 namespace Steelax.Toolkit.HighPerformance.Tests.Concurrency.Primitives;
 
@@ -15,7 +15,7 @@ public static partial class FanInSlimTests
             callback.Fire();
 
             var slots = source.Take();
-            Assert.True(AdvanceBitOperations.IsSet(slots, 3));
+            Assert.True(AdvanceBitOperations.IsBitSet(slots, 3));
         }
 
         [Fact]
@@ -27,7 +27,7 @@ public static partial class FanInSlimTests
             callback.Handler();
 
             var slots = source.Take();
-            Assert.True(AdvanceBitOperations.IsSet(slots, 2));
+            Assert.True(AdvanceBitOperations.IsBitSet(slots, 2));
         }
 
         [Fact]

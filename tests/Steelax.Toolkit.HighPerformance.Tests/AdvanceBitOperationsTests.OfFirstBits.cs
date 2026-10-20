@@ -26,9 +26,9 @@ public static partial class AdvanceBitOperationsTests
         {
             var mask = AdvanceBitOperations.OfFirstBits(30);
 
-            Assert.True(AdvanceBitOperations.TrySet(ref mask, 30));
-            Assert.True(AdvanceBitOperations.TrySet(ref mask, 31));
-            Assert.True(AdvanceBitOperations.HasAll(mask));
+            Assert.True(AdvanceBitOperations.TrySetBit(ref mask, 30));
+            Assert.True(AdvanceBitOperations.TrySetBit(ref mask, 31));
+            Assert.True(AdvanceBitOperations.HasAllBits(mask));
         }
 
         [Theory]
@@ -45,7 +45,7 @@ public static partial class AdvanceBitOperationsTests
 
             // OfFirstBits(32) is the full mask: the absorbing element for OR.
             var fromFull = AdvanceBitOperations.OfFirstBits(32) | externMask;
-            Assert.True(AdvanceBitOperations.HasAll(fromFull));
+            Assert.True(AdvanceBitOperations.HasAllBits(fromFull));
         }
 
         [Theory]

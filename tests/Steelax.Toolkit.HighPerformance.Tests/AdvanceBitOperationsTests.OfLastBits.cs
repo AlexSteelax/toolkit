@@ -36,7 +36,7 @@ public static partial class AdvanceBitOperationsTests
 
             // OfLastBits(32) is the full mask: the absorbing element for OR.
             var fromFull = AdvanceBitOperations.OfLastBits(32) | externMask;
-            Assert.True(AdvanceBitOperations.HasAll(fromFull));
+            Assert.True(AdvanceBitOperations.HasAllBits(fromFull));
         }
 
         [Theory]

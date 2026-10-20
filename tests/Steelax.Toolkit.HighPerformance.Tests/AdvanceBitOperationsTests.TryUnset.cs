@@ -2,14 +2,14 @@ namespace Steelax.Toolkit.HighPerformance.Tests;
 
 public static partial class AdvanceBitOperationsTests
 {
-    public sealed class TryUnset
+    public sealed class TryUnsetBit
     {
         [Fact]
         public void SetSlot_RemovesAndReturnsTrue()
         {
             var mask = 0b1011u; // slots 0, 1, 3
 
-            var removed = AdvanceBitOperations.TryUnset(ref mask, 1);
+            var removed = AdvanceBitOperations.TryUnsetBit(ref mask, 1);
 
             Assert.True(removed);
             Assert.Equal(0b1001u, mask); // slots 0, 3
@@ -20,7 +20,7 @@ public static partial class AdvanceBitOperationsTests
         {
             var mask = 0b1011u; // slots 0, 1, 3
 
-            var removed = AdvanceBitOperations.TryUnset(ref mask, 2);
+            var removed = AdvanceBitOperations.TryUnsetBit(ref mask, 2);
 
             Assert.False(removed);
             Assert.Equal(0b1011u, mask);
@@ -37,7 +37,7 @@ public static partial class AdvanceBitOperationsTests
         {
             var rest = mask;
 
-            var removed = AdvanceBitOperations.TryUnset(ref rest, index);
+            var removed = AdvanceBitOperations.TryUnsetBit(ref rest, index);
 
             Assert.Equal(expectedRemoved, removed);
             Assert.Equal(expectedMask, rest);
@@ -50,7 +50,7 @@ public static partial class AdvanceBitOperationsTests
         {
             var mask = 1u;
 
-            Assert.Throws<ArgumentOutOfRangeException>(() => AdvanceBitOperations.TryUnset(ref mask, invalid));
+            Assert.Throws<ArgumentOutOfRangeException>(() => AdvanceBitOperations.TryUnsetBit(ref mask, invalid));
         }
     }
 }
