@@ -66,8 +66,7 @@ public struct MonotonicMax
         _mask = (uint)slotCount - 1;
         _shift = 32 - BitOperations.Log2((uint)slotCount);
 
-        for (var i = 0; i < slotCount; i++)
-            _slots[i].Value = defaultValue;
+        _slots[..].Fill(new PaddedSlot { Value = defaultValue });
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
