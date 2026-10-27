@@ -2,7 +2,7 @@
 
 namespace Steelax.Toolkit.HighPerformance.Tests.Primitives;
 
-public static partial class DequeTests
+public static partial class FixedDequeTests
 {
     public sealed class Constructor
     {
@@ -10,12 +10,12 @@ public static partial class DequeTests
         [InlineData(0)]
         [InlineData(-1)]
         public void InvalidCapacity_ThrowsArgumentOutOfRangeException(int capacity) =>
-            Assert.Throws<ArgumentOutOfRangeException>(() => new Deque<int>(capacity));
+            Assert.Throws<ArgumentOutOfRangeException>(() => new FixedDeque<int>(capacity));
 
         [Fact]
         public void ValidCapacity_InitializesState()
         {
-            var deque = new Deque<int>(4);
+            var deque = new FixedDeque<int>(4);
 
             Assert.Equal(4, deque.Capacity);
             Assert.Equal(0, deque.Count);

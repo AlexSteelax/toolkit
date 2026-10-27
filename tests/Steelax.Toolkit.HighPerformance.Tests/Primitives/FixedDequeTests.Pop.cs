@@ -2,14 +2,14 @@
 
 namespace Steelax.Toolkit.HighPerformance.Tests.Primitives;
 
-public static partial class DequeTests
+public static partial class FixedDequeTests
 {
     public sealed class Pop
     {
         [Fact]
         public void PopFirst_FIFO_Order_Preserved()
         {
-            var deque = new Deque<int>(4);
+            var deque = new FixedDeque<int>(4);
             deque.TryAddLast(1);
             deque.TryAddLast(2);
             deque.TryAddLast(3);
@@ -27,7 +27,7 @@ public static partial class DequeTests
         [Fact]
         public void PopLast_LIFO_Order_Preserved()
         {
-            var deque = new Deque<int>(4);
+            var deque = new FixedDeque<int>(4);
             deque.TryAddLast(1);
             deque.TryAddLast(2);
             deque.TryAddLast(3);
@@ -45,7 +45,7 @@ public static partial class DequeTests
         [Fact]
         public void PopFirst_WhenEmpty_ReturnsFalse()
         {
-            var deque = new Deque<int>(2);
+            var deque = new FixedDeque<int>(2);
 
             Assert.False(deque.TryPopFirst(out var item));
             Assert.Equal(0, item);
@@ -54,7 +54,7 @@ public static partial class DequeTests
         [Fact]
         public void PopLast_WhenEmpty_ReturnsFalse()
         {
-            var deque = new Deque<int>(2);
+            var deque = new FixedDeque<int>(2);
 
             Assert.False(deque.TryPopLast(out var item));
             Assert.Equal(0, item);
@@ -63,7 +63,7 @@ public static partial class DequeTests
         [Fact]
         public void Circular_ReusesSlots_AndPreservesOrder()
         {
-            var deque = new Deque<int>(3);
+            var deque = new FixedDeque<int>(3);
 
             // Fill the ring.
             deque.TryAddLast(1);
@@ -95,7 +95,7 @@ public static partial class DequeTests
         [Fact]
         public void PopLast_ReusesSlots_FromFront()
         {
-            var deque = new Deque<int>(3);
+            var deque = new FixedDeque<int>(3);
 
             deque.TryAddLast(1);
             deque.TryAddLast(2);

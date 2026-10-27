@@ -2,14 +2,14 @@
 
 namespace Steelax.Toolkit.HighPerformance.Tests.Primitives;
 
-public static partial class DequeTests
+public static partial class FixedDequeTests
 {
     public sealed class RefAccess
     {
         [Fact]
         public void Indexer_Last_MutatesInPlace()
         {
-            var deque = new Deque<Counter>(4);
+            var deque = new FixedDeque<Counter>(4);
             deque.TryAddLast(new Counter());
             deque.TryAddLast(new Counter());
 
@@ -24,7 +24,7 @@ public static partial class DequeTests
         [Fact]
         public void Indexer_First_MutatesInPlace()
         {
-            var deque = new Deque<Counter>(4);
+            var deque = new FixedDeque<Counter>(4);
             deque.TryAddLast(new Counter());
             deque.TryAddLast(new Counter());
 
@@ -38,7 +38,7 @@ public static partial class DequeTests
         [Fact]
         public void Indexer_WhenEmpty_ThrowsArgumentOutOfRangeException()
         {
-            var deque = new Deque<int>(2);
+            var deque = new FixedDeque<int>(2);
 
             Assert.Throws<ArgumentOutOfRangeException>(() => _ = deque[0]);
             Assert.Throws<ArgumentOutOfRangeException>(() => _ = deque[-1]);

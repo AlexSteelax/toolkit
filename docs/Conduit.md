@@ -138,4 +138,4 @@ if (/* version has not advanced for too long */)
 
 - [`CompleteSignal`](CompleteSignal.md) — the edge-triggered readiness signal backing `WaitToReadAsync`/`WaitToWriteAsync`.
 - [`SegmentedQueue<T>`](SegmentedQueue.md) — the unbounded, non-concurrent chained counterpart.
-- [`RingCursor<T>`](RingCursor.md), [`Deque<T>`](Deque.md) — fixed-capacity non-concurrent structures.
+- [`RingCursor<T>`](RingCursor.md), [`FixedDeque<T>`](FixedDeque.md) — fixed-capacity non-concurrent structures.

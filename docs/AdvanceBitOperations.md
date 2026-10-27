@@ -69,4 +69,4 @@ while (TryPopBit(ref mask, out var index, 2))
 ## See also
 
 - [`FanInSlim`](FanInSlim.md) — `Take()` returns a raw `uint` mask of fired slots.
-- [`Deque<T>`](Deque.md)
+- [`FixedDeque<T>`](FixedDeque.md)

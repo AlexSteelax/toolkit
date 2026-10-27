@@ -1,4 +1,5 @@
-﻿using System.Runtime.CompilerServices;
+﻿using System.Numerics;
+using System.Runtime.CompilerServices;
 using System.Runtime.ExceptionServices;
 using System.Runtime.InteropServices;
 using Steelax.Toolkit.HighPerformance.Concurrency.Primitives;
@@ -80,7 +81,11 @@ public partial class Conduit<T>
         ArgumentOutOfRangeException.ThrowIfNegativeOrZero(capacity);
 
         Capacity = (uint)capacity;
-        _buffer = new T[NextPowerOfTwo((uint)capacity + 1)];
+
+        var ringLength = (uint)capacity + 1;
+        var bufferLength = BitOperations.RoundUpToPowerOf2(ringLength);
+        Throwers.ThrowIfPow2RoundUpWrapped(ringLength, bufferLength);
+        _buffer = new T[bufferLength];
         _mask = (uint)_buffer.Length - 1;
         
         if (behavior.HasFlag(ConduitBehavior.AwaitableReader))
@@ -88,18 +93,6 @@ public partial class Conduit<T>
         
         if (behavior.HasFlag(ConduitBehavior.AwaitableWriter))
             _writerSignal = new CompleteSignal();
-    }
-    
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static uint NextPowerOfTwo(uint value)
-    {
-        value--;
-        value |= value >> 1;
-        value |= value >> 2;
-        value |= value >> 4;
-        value |= value >> 8;
-        value |= value >> 16;
-        return value + 1;
     }
     
     private void WakeUpReader()

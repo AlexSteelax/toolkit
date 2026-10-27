@@ -1,7 +1,7 @@
-# Deque\<T\>
+# FixedDeque\<T\>
 
 > Namespace: `Steelax.Toolkit.HighPerformance.Primitives`
-> Source: [`Deque.cs`](../src/Steelax.Toolkit.HighPerformance/Primitives/Deque.cs)
+> Source: [`FixedDeque.cs`](../src/Steelax.Toolkit.HighPerformance/Primitives/FixedDeque.cs)
 
 A fixed-capacity **double-ended queue** with symmetric access to both ends and random access by offset from the first element.
 
@@ -18,7 +18,7 @@ A fixed-capacity **double-ended queue** with symmetric access to both ends and r
 ```csharp
 using Steelax.Toolkit.HighPerformance.Primitives;
 
-var deque = new Deque<int>(capacity: 4);
+var deque = new FixedDeque<int>(capacity: 4);
 
 deque.TryAddLast(10);             // true
 deque.TryAddLast(20);             // true
@@ -76,14 +76,14 @@ deque.Clear();                    // resets to the initial state
 
 ## Constructor
 
-`Deque(int capacity)` — throws `ArgumentOutOfRangeException` when `capacity` is not positive.
+`FixedDeque(int capacity)` — throws `ArgumentOutOfRangeException` when `capacity` is not positive.
 
 > **Capacity and reserved slots:** the internal buffer is allocated as the nearest power of two ≥ `capacity` (for example `capacity: 5` allocates 8 slots). The extra slots are reserved for masking and are never exposed: writes are rejected once `Count` reaches `Capacity`.
 
 ## Example: draining a full deque from the front
 
 ```csharp
-var deque = new Deque<string>(capacity: 2);
+var deque = new FixedDeque<string>(capacity: 2);
 
 deque.TryAddLast("a");
 deque.TryAddLast("b");
@@ -99,7 +99,7 @@ deque.IsEmpty; // true
 ## Example: LIFO (stack) via the back end
 
 ```csharp
-var stack = new Deque<int>(capacity: 8);
+var stack = new FixedDeque<int>(capacity: 8);
 
 stack.TryAddLast(1);
 stack.TryAddLast(2);

@@ -2,14 +2,14 @@
 
 namespace Steelax.Toolkit.HighPerformance.Tests.Primitives;
 
-public static partial class DequeTests
+public static partial class FixedDequeTests
 {
     public sealed class Clear
     {
         [Fact]
         public void Clear_ResetsDeque()
         {
-            var deque = new Deque<int>(3);
+            var deque = new FixedDeque<int>(3);
             deque.TryAddLast(1);
             deque.TryAddLast(2);
 

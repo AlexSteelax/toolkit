@@ -1,5 +1,7 @@
 using System.Diagnostics.CodeAnalysis;
+using System.Numerics;
 using System.Runtime.CompilerServices;
+using Steelax.Toolkit.HighPerformance.Internal;
 
 namespace Steelax.Toolkit.HighPerformance.Primitives;
 
@@ -30,7 +32,7 @@ namespace Steelax.Toolkit.HighPerformance.Primitives;
 /// </para>
 /// </remarks>
 [PublicAPI]
-public sealed class Deque<T>
+public sealed class FixedDeque<T>
 {
     private readonly T[] _buffer;
     private readonly uint _capacity;
@@ -38,20 +40,25 @@ public sealed class Deque<T>
     private uint _count;
     private uint _firstOffset;
 
+    private static readonly bool IsReferenceOrContainsReferences = RuntimeHelpers.IsReferenceOrContainsReferences<T>();
+
     /// <summary>
-    /// Initializes a new <see cref="Deque{T}"/> with the specified capacity.
+    /// Initializes a new <see cref="FixedDeque{T}"/> with the specified capacity.
     /// </summary>
     /// <param name="capacity">The maximum number of buffered elements (must be greater than 0).</param>
     /// <exception cref="ArgumentOutOfRangeException">
     /// Thrown when <paramref name="capacity"/> is not positive.
     /// </exception>
     [PublicAPI]
-    public Deque(int capacity)
+    public FixedDeque(int capacity)
     {
         ArgumentOutOfRangeException.ThrowIfNegativeOrZero(capacity);
-
+        
         _capacity = (uint)capacity;
-        _buffer = new T[NextPowerOfTwo((uint)capacity)];
+
+        var bufferLength = BitOperations.RoundUpToPowerOf2(_capacity);
+        Throwers.ThrowIfPow2RoundUpWrapped(_capacity, bufferLength);
+        _buffer = new T[bufferLength];
         _mask = (uint)_buffer.Length - 1;
     }
 
@@ -265,22 +272,10 @@ public sealed class Deque<T>
         if (_count == 0)
             return;
 
-        if (RuntimeHelpers.IsReferenceOrContainsReferences<T>())
+        if (IsReferenceOrContainsReferences)
             Array.Clear(_buffer, 0, _buffer.Length);
         
         _firstOffset = 0;
         _count = 0;
-    }
-
-    /// <summary>Rounds <paramref name="value"/> up to the nearest power of two.</summary>
-    private static int NextPowerOfTwo(uint value)
-    {
-        value--;
-        value |= value >> 1;
-        value |= value >> 2;
-        value |= value >> 4;
-        value |= value >> 8;
-        value |= value >> 16;
-        return (int)(value + 1);
     }
 }
