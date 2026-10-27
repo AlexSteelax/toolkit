@@ -67,13 +67,14 @@ public static partial class CompleteSignalTests
         }
 
         [Fact]
-        public async Task SignalThenComplete_TryReset_StillConsumesPendingReadiness()
+        public async Task SignalThenComplete_TryReset_IsSuppressedByTerminalLatch()
         {
             var signal = new CompleteSignal();
             signal.Signal();
             signal.Complete();
 
-            Assert.True(signal.TryReset());
+            // Completion dominates the pending readiness marker everywhere: TryReset must not
+            // resurrect an edge that WaitAsync already refuses to report.
             Assert.False(signal.TryReset());
             Assert.False(await signal.WaitAsync());
         }
