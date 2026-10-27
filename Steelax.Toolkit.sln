@@ -34,23 +34,6 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Steelax.Toolkit.HighPerform
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Steelax.Toolkit.HighPerformance.Benchmarks", "benchmarks\Steelax.Toolkit.HighPerformance.Benchmarks\Steelax.Toolkit.HighPerformance.Benchmarks.csproj", "{7E59D403-A93F-4B2F-871D-40160D9BFE57}"
 EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "docs", "docs", "{340A2C35-1311-4820-80F4-0E43563C689C}"
-	ProjectSection(SolutionItems) = preProject
-		docs\AsyncMarshal.md = docs\AsyncMarshal.md
-		docs\BitTaskAny.md = docs\BitTaskAny.md
-		docs\EventEnumerator.md = docs\EventEnumerator.md
-		docs\EventTask.md = docs\EventTask.md
-		docs\FanInSignalCallback.md = docs\FanInSignalCallback.md
-		docs\FanInSlim.md = docs\FanInSlim.md
-		docs\ResultStates.md = docs\ResultStates.md
-		docs\Deque.md = docs\Deque.md
-		docs\RingCursor.md = docs\RingCursor.md
-		docs\AdvanceBitOperations.md = docs\AdvanceBitOperations.md
-		docs\Conduit.md = docs\Conduit.md
-		docs\CompleteSignal.md = docs\CompleteSignal.md
-		docs\SegmentedQueue.md = docs\SegmentedQueue.md
-	EndProjectSection
-EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
