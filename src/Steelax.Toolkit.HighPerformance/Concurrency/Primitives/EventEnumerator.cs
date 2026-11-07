@@ -201,9 +201,19 @@ public sealed class EventEnumerator<T> : IAsyncDisposable
     /// Releases the underlying async enumerator.
     /// </summary>
     /// <returns>A <see cref="ValueTask"/> that represents the asynchronous dispose operation.</returns>
-    public ValueTask DisposeAsync()
+    public async ValueTask DisposeAsync()
     {
-        return _enumerator.DisposeAsync();
+        if (GetState().IsPending)
+            try
+            {
+                await _next;
+            }
+            catch
+            {
+                // Nothing
+            }
+        
+        await _enumerator.DisposeAsync();
     }
 }
 
