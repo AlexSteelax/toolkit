@@ -187,6 +187,11 @@ public class CompleteSignal(bool allowSynchronousContinuations = true) : IValueT
         {
             var state = Volatile.Read(ref _handshake);
 
+            // Completed (terminal): readiness is meaningless and never cleared here — the same
+            // dominance WaitAsync applies, so the two consumption paths stay consistent.
+            if ((state & Completed) != 0)
+                return false;
+
             if ((state & Ready) == 0)
                 return false;
 
@@ -203,14 +208,18 @@ public class CompleteSignal(bool allowSynchronousContinuations = true) : IValueT
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public virtual void Signal()
     {
+        var state = Volatile.Read(ref _handshake);  // ← один раз
+    
+        // Completed (terminal): further readiness is meaningless.
+        if ((state & Completed) != 0)
+            return;
+    
+        // Ready already set: early return (no CAS)
+        if ((state & Ready) != 0 && (state & Wait) == 0)
+            return;
+        
         while (true)
         {
-            var state = Volatile.Read(ref _handshake);
-
-            // Completed (terminal): further readiness is meaningless.
-            if ((state & Completed) != 0)
-                return;
-
             // A waiter is registered: claim the Wait bit and deliver exactly one wake. Only one
             // signaler can win this CAS, so one registration is completed at most once.
             if ((state & Wait) != 0)
@@ -220,17 +229,19 @@ public class CompleteSignal(bool allowSynchronousContinuations = true) : IValueT
                     _core.SetResult(true);
                     return;
                 }
+            }
+            else
+            {
+                // No waiter: raise the readiness flag (if not already raised), to be consumed by the next
+                // WaitAsync fast path or TryReset.
+                if ((state & Ready) != 0)
+                    return;
 
-                continue;
+                if (Interlocked.CompareExchange(ref _handshake, state | Ready, state) == state)
+                    return;
             }
 
-            // No waiter: raise the readiness flag (if not already raised), to be consumed by the next
-            // WaitAsync fast path or TryReset.
-            if ((state & Ready) != 0)
-                return;
-
-            if (Interlocked.CompareExchange(ref _handshake, state | Ready, state) == state)
-                return;
+            state = Volatile.Read(ref _handshake);
         }
     }
     

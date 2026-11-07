@@ -2,14 +2,14 @@
 
 namespace Steelax.Toolkit.HighPerformance.Tests.Primitives;
 
-public static partial class DequeTests
+public static partial class FixedDequeTests
 {
     public sealed class NonPowerOfTwoCapacity
     {
         [Fact]
         public void Capacity5_IsStrictBound_WhileSlotsRoundUpToPowerOfTwo()
         {
-            var deque = new Deque<int>(5);
+            var deque = new FixedDeque<int>(5);
 
             // Capacity is the requested bound; the internal buffer rounds up to 8.
             Assert.Equal(5, deque.Capacity);

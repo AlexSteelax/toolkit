@@ -1,4 +1,5 @@
-﻿using Steelax.Toolkit.HighPerformance.Concurrency.Primitives;
+﻿using System.Runtime.CompilerServices;
+using Steelax.Toolkit.HighPerformance.Concurrency.Primitives;
 
 namespace Steelax.Toolkit.HighPerformance;
 
@@ -16,6 +17,7 @@ public static class AsyncMarshal
     /// <typeparam name="T">The type of the enumerated elements.</typeparam>
     /// <param name="source">The async enumerator to wrap (consumed by this call).</param>
     /// <returns>An <see cref="EventEnumerator{T}"/> driving <paramref name="source"/>.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static EventEnumerator<T> AsNonBlocking<T>(this IAsyncEnumerator<T> source) =>
         new(source);
 
@@ -44,6 +46,7 @@ public static class AsyncMarshal
     /// the callback is not invoked for an already-complete task.
     /// </para>
     /// </remarks>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static bool FireUnsafeOnCompleted<T>(scoped in ValueTask<T> task, Action? callback, OnCompletedBehavior behavior)
     {
         var awaiter = task.GetAwaiter();
@@ -85,6 +88,7 @@ public static class AsyncMarshal
     /// the callback is not invoked for an already-complete task.
     /// </para>
     /// </remarks>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static bool FireUnsafeOnCompleted(scoped in ValueTask task, Action? callback, OnCompletedBehavior behavior)
     {
         var awaiter = task.GetAwaiter();
@@ -126,6 +130,7 @@ public static class AsyncMarshal
     /// the callback is not invoked for an already-complete task.
     /// </para>
     /// </remarks>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static bool FireUnsafeOnCompleted(scoped in Task task, Action? callback, OnCompletedBehavior behavior)
     {
         var awaiter = task.GetAwaiter();

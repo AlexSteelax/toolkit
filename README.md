@@ -26,7 +26,7 @@ dotnet add package Steelax.Toolkit.HighPerformance
 
 | Type | Namespace | Docs |
 |------|-----------|------|
-| `Deque<T>` | `Steelax.Toolkit.HighPerformance.Primitives` | [📄 Deque](docs/Deque.md) |
+| `FixedDeque<T>` | `Steelax.Toolkit.HighPerformance.Primitives` | [📄 FixedDeque](docs/FixedDeque.md) |
 | `RingCursor<T>` | `Steelax.Toolkit.HighPerformance.Primitives` | [📄 RingCursor](docs/RingCursor.md) |
 | `AdvanceBitOperations` | `Steelax.Toolkit.HighPerformance.Primitives` | [📄 AdvanceBitOperations](docs/AdvanceBitOperations.md) |
 | `SegmentedQueue<T>` | `Steelax.Toolkit.HighPerformance.Primitives` | [📄 SegmentedQueue](docs/SegmentedQueue.md) |

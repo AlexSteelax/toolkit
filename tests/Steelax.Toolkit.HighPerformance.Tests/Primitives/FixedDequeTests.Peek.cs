@@ -2,14 +2,14 @@
 
 namespace Steelax.Toolkit.HighPerformance.Tests.Primitives;
 
-public static partial class DequeTests
+public static partial class FixedDequeTests
 {
     public sealed class Peek
     {
         [Fact]
         public void PeekFirst_ReturnsFirst_WithoutRemoving()
         {
-            var deque = new Deque<int>(3);
+            var deque = new FixedDeque<int>(3);
             deque.TryAddLast(1);
             deque.TryAddLast(2);
 
@@ -21,7 +21,7 @@ public static partial class DequeTests
         [Fact]
         public void PeekLast_ReturnsLast_WithoutRemoving()
         {
-            var deque = new Deque<int>(3);
+            var deque = new FixedDeque<int>(3);
             deque.TryAddLast(1);
             deque.TryAddLast(2);
 
@@ -33,7 +33,7 @@ public static partial class DequeTests
         [Fact]
         public void Peek_WhenEmpty_ReturnsFalse()
         {
-            var deque = new Deque<int>(2);
+            var deque = new FixedDeque<int>(2);
 
             Assert.False(deque.TryPeekFirst(out _));
             Assert.False(deque.TryPeekLast(out _));

@@ -2,14 +2,14 @@
 
 namespace Steelax.Toolkit.HighPerformance.Tests.Primitives;
 
-public static partial class DequeTests
+public static partial class FixedDequeTests
 {
     public sealed class Offset
     {
         [Fact]
         public void TryGetAt_ReturnsElementAtOffset()
         {
-            var deque = new Deque<int>(4);
+            var deque = new FixedDeque<int>(4);
             deque.TryAddLast(1);
             deque.TryAddLast(2);
             deque.TryAddLast(3);
@@ -26,7 +26,7 @@ public static partial class DequeTests
         [Fact]
         public void TryGetAt_OutOfRange_ReturnsFalse()
         {
-            var deque = new Deque<int>(3);
+            var deque = new FixedDeque<int>(3);
             deque.TryAddLast(1);
 
             Assert.False(deque.TryGetAt(1, out _));
@@ -36,7 +36,7 @@ public static partial class DequeTests
         [Fact]
         public void Indexer_ReturnsRef_ToOffsetElement()
         {
-            var deque = new Deque<Counter>(4);
+            var deque = new FixedDeque<Counter>(4);
             deque.TryAddLast(new Counter());
             deque.TryAddLast(new Counter());
             deque.TryAddLast(new Counter());
@@ -51,7 +51,7 @@ public static partial class DequeTests
         [Fact]
         public void Indexer_OutOfRange_ThrowsArgumentOutOfRangeException()
         {
-            var deque = new Deque<int>(2);
+            var deque = new FixedDeque<int>(2);
             deque.TryAddLast(1);
 
             Assert.Throws<ArgumentOutOfRangeException>(() => _ = deque[1]);
@@ -61,7 +61,7 @@ public static partial class DequeTests
         [Fact]
         public void IndexFromEnd_ReturnsRef_ToElement()
         {
-            var deque = new Deque<Counter>(4);
+            var deque = new FixedDeque<Counter>(4);
             deque.TryAddLast(new Counter());
             deque.TryAddLast(new Counter());
             deque.TryAddLast(new Counter());
@@ -83,7 +83,7 @@ public static partial class DequeTests
         [Fact]
         public void IndexFromEnd_OutOfRange_ThrowsArgumentOutOfRangeException()
         {
-            var deque = new Deque<int>(2);
+            var deque = new FixedDeque<int>(2);
             deque.TryAddLast(1);
 
             Assert.Throws<ArgumentOutOfRangeException>(() => _ = deque[^2]);

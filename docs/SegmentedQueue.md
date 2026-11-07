@@ -85,5 +85,5 @@ for (var i = 0; i < 100; i++)
 
 ## See also
 
-- [`Deque<T>`](Deque.md) — the fixed-capacity double-ended counterpart.
+- [`FixedDeque<T>`](FixedDeque.md) — the fixed-capacity double-ended counterpart.
 - [`RingCursor<T>`](RingCursor.md) — a pre-allocated, cursor-based ring.

@@ -33,6 +33,7 @@ public struct MonotonicMax
     /// </param>
     /// <returns>An 8-slot <see cref="MonotonicMax" />.</returns>
     [PublicAPI]
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static MonotonicMax Create8(long defaultValue = 0) => new(8, defaultValue);
 
     /// <summary>
@@ -44,6 +45,7 @@ public struct MonotonicMax
     /// </param>
     /// <returns>A 16-slot <see cref="MonotonicMax" />.</returns>
     [PublicAPI]
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static MonotonicMax Create16(long defaultValue = 0) => new(16, defaultValue);
 
     /// <summary>
@@ -70,7 +72,7 @@ public struct MonotonicMax
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private int SlotOf(int threadId) => (int)(unchecked((uint)threadId * 2654435761u) >> _shift) & (int)_mask;
+    internal int SlotOf(int threadId) => (int)(unchecked((uint)threadId * 2654435761u) >> _shift) & (int)_mask;
 
     /// <summary>
     ///     Attempts to advance the caller's slot to <paramref name="newValue" /> if it is greater.

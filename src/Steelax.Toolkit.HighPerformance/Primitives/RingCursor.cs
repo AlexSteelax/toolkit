@@ -1,4 +1,6 @@
+using System.Numerics;
 using System.Runtime.CompilerServices;
+using Steelax.Toolkit.HighPerformance.Internal;
 
 namespace Steelax.Toolkit.HighPerformance.Primitives;
 
@@ -54,7 +56,10 @@ public sealed class RingCursor<T>
         ArgumentNullException.ThrowIfNull(factory);
 
         _capacity = (uint)capacity;
-        _buffer = new T[NextPowerOfTwo((uint)capacity)];
+
+        var bufferLength = BitOperations.RoundUpToPowerOf2(_capacity);
+        Throwers.ThrowIfPow2RoundUpWrapped(_capacity, bufferLength);
+        _buffer = new T[bufferLength];
         _mask = (uint)_buffer.Length - 1;
 
         for (var i = 0; i < _buffer.Length; i++)
@@ -248,17 +253,5 @@ public sealed class RingCursor<T>
             normalized += (int)_capacity;
 
         return ref this[normalized];
-    }
-
-    /// <summary>Rounds <paramref name="value"/> up to the nearest power of two.</summary>
-    private static int NextPowerOfTwo(uint value)
-    {
-        value--;
-        value |= value >> 1;
-        value |= value >> 2;
-        value |= value >> 4;
-        value |= value >> 8;
-        value |= value >> 16;
-        return (int)(value + 1);
     }
 }
