@@ -203,15 +203,12 @@ public sealed class EventEnumerator<T> : IAsyncDisposable
     /// <returns>A <see cref="ValueTask"/> that represents the asynchronous dispose operation.</returns>
     public async ValueTask DisposeAsync()
     {
-        if (GetState().IsPending)
-            try
-            {
-                await _next;
-            }
-            catch
-            {
-                // Nothing
-            }
+        // The underlying enumerable may be an async iterator whose DisposeAsync throws
+        // NotSupportedException while a MoveNextAsync is still in flight, so wait for the current
+        // move to settle (value delivered, end of stream, a fault, or cancellation) before releasing
+        // it. A source that never settles cannot be force-terminated from here and disposes like any
+        // other enumerator with an in-flight read.
+        SpinWait.SpinUntil(() => !GetState().IsPending);
         
         await _enumerator.DisposeAsync();
     }

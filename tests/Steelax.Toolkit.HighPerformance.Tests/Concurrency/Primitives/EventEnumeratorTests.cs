@@ -1,3 +1,4 @@
+using System.Threading.Channels;
 using Steelax.Toolkit.HighPerformance.Concurrency.Primitives;
 
 namespace Steelax.Toolkit.HighPerformance.Tests.Concurrency.Primitives;
@@ -59,6 +60,64 @@ public static partial class EventEnumeratorTests
             public ValueTask DisposeAsync()
             {
                 onDispose.Invoke();
+                return ValueTask.CompletedTask;
+            }
+        }
+    }
+
+    /// <summary>
+    /// An async enumerable backed by a <see cref="Channel{T}"/>, where <see cref="ChannelReader{T}.WaitToReadAsync"/>
+    /// observes the <see cref="CancellationToken"/> passed to <see cref="IAsyncEnumerable{T}.GetAsyncEnumerator"/>.
+    /// </summary>
+    internal sealed class ChannelAsyncEnumerable(Channel<int> channel, Action? onDispose = null) : IAsyncEnumerable<int>
+    {
+        public IAsyncEnumerator<int> GetAsyncEnumerator(CancellationToken cancellationToken = default)
+            => new ChannelAsyncEnumerator(channel.Reader, cancellationToken, onDispose);
+
+        private sealed class ChannelAsyncEnumerator(ChannelReader<int> reader, CancellationToken token, Action? onDispose) : IAsyncEnumerator<int>
+        {
+            public int Current { get; private set; }
+
+            public async ValueTask<bool> MoveNextAsync()
+            {
+                while (await reader.WaitToReadAsync(token))
+                {
+                    if (reader.TryRead(out var value))
+                    {
+                        Current = value;
+                        return true;
+                    }
+                }
+
+                return false;
+            }
+
+            public ValueTask DisposeAsync()
+            {
+                onDispose?.Invoke();
+                return ValueTask.CompletedTask;
+            }
+        }
+    }
+
+    /// <summary>
+    /// An async enumerable whose <c>MoveNextAsync</c> is driven by an externally supplied
+    /// <see cref="TaskCompletionSource{TResult}"/> and whose disposal is tracked.
+    /// </summary>
+    internal sealed class PendingDisposeAsyncEnumerable(TaskCompletionSource<bool> completion, Action? onDispose = null) : IAsyncEnumerable<int>
+    {
+        public IAsyncEnumerator<int> GetAsyncEnumerator(CancellationToken cancellationToken = default)
+            => new PendingDisposeAsyncEnumerator(completion, onDispose);
+
+        private sealed class PendingDisposeAsyncEnumerator(TaskCompletionSource<bool> completion, Action? onDispose) : IAsyncEnumerator<int>
+        {
+            public int Current => 0;
+
+            public ValueTask<bool> MoveNextAsync() => new(completion.Task);
+
+            public ValueTask DisposeAsync()
+            {
+                onDispose?.Invoke();
                 return ValueTask.CompletedTask;
             }
         }
